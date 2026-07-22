@@ -1,0 +1,70 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: subscriptions
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "127.0.0.1:5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d subscriptions"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build: ./backend
+    env_file: ./backend/.env
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
+    ports:
+      - "8000:8000"
+    volumes:
+      - support_uploads:/app/uploads/support
+    depends_on:
+      db:
+        condition: service_healthy
+
+  deposit-worker:
+    build: ./backend
+    env_file: ./backend/.env
+    command: python -m app.workers.deposit_worker
+    depends_on:
+      db:
+        condition: service_healthy
+
+  reward-worker:
+    build: ./backend
+    env_file: ./backend/.env
+    command: python -m app.workers.reward_worker
+    depends_on:
+      db:
+        condition: service_healthy
+
+  customer-frontend:
+    build:
+      context: ./customer-frontend
+      args:
+        VITE_API_BASE_URL: http://localhost:8000/api/v1
+        VITE_APP_NAME: Automotive Club
+    ports:
+      - "3000:80"
+    depends_on:
+      - api
+
+  admin-frontend:
+    build:
+      context: ./admin-frontend
+      args:
+        VITE_API_BASE_URL: http://localhost:8000/api/v1
+        VITE_ADMIN_APP_NAME: Панель управления
+    ports:
+      - "3001:80"
+    depends_on:
+      - api
+
+volumes:
+  postgres_data:
+  support_uploads:

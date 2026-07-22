@@ -1,0 +1,9 @@
+backend/.env
+customer-frontend/.env
+admin-frontend/.env
+**/node_modules/
+**/dist/
+**/__pycache__/
+**/.pytest_cache/
+*.log
+*.db
