@@ -13,15 +13,28 @@ os.environ["DATABASE_URL"] = os.getenv(
     "sqlite+aiosqlite:////tmp/subscription_platform_test.db",
 )
 os.environ["JWT_SECRET"] = "test-secret-that-is-not-used-in-production"
-os.environ["NETWORK"] = "TRON"
-os.environ["NETWORK_DISPLAY_NAME"] = "TRON (TRC20)"
+os.environ["NETWORK"] = "ETHEREUM"
+os.environ["NETWORK_DISPLAY_NAME"] = "Ethereum (ERC-20)"
 os.environ["ASSET"] = "USDT"
-os.environ["BINANCE_ENABLED"] = "false"
-os.environ["BINANCE_DEPOSIT_ADDRESS"] = "T" + "A" * 33
+os.environ["ASSET_DECIMALS"] = "6"
+os.environ["DEPOSIT_MONITORING_ENABLED"] = "true"
+os.environ["DEFAULT_DEPOSIT_ADDRESS"] = "0x" + "a" * 40
+os.environ["INFURA_API_KEY"] = "test-infura-key"
+os.environ["ETHEREUM_PROVIDER_NETWORK"] = "mainnet"
+os.environ["ETHEREUM_CHAIN_ID"] = "1"
+os.environ["ETHEREUM_CONFIRMATIONS"] = "12"
+os.environ["ETHEREUM_INITIAL_LOOKBACK_BLOCKS"] = "200"
+os.environ["ETHEREUM_REORG_LOOKBACK_BLOCKS"] = "24"
 os.environ["SUPPORT_UPLOAD_DIR"] = "/tmp/subscription_platform_test_uploads"
 os.environ["MIN_DEPOSIT_AMOUNT"] = "10.000000"
 os.environ["MIN_WITHDRAWAL_AMOUNT"] = "20.000000"
 os.environ["WITHDRAWAL_FEE"] = "2.000000"
+os.environ["WITHDRAWAL_ALLOWED_WEEKDAY"] = "-1"
+os.environ["BUSINESS_TIMEZONE"] = "Asia/Almaty"
+os.environ["REFERRAL_PURCHASE_BONUS_PERCENT"] = "10"
+os.environ["PREMIUM_REFERRAL_REWARD_BONUS"] = "2.000000"
+os.environ["EMAIL_DELIVERY_ENABLED"] = "false"
+os.environ["CUSTOMER_FRONTEND_URL"] = "http://testserver"
 
 import httpx
 import pytest_asyncio
@@ -34,6 +47,7 @@ from app.db.models import User
 from app.db.session import async_session_maker, engine
 from app.main import app
 from app.services.wallet_service import WalletService
+from app.utils.datetime import utcnow
 
 UPLOAD_DIR = Path(os.environ["SUPPORT_UPLOAD_DIR"])
 
@@ -68,12 +82,31 @@ async def client():
 
 @pytest_asyncio.fixture
 async def make_account(client):
-    async def factory(email: str | None = None, password: str = "User123!") -> dict:
+    async def factory(
+        email: str | None = None,
+        password: str = "User123!",
+        referral_code: str | None = None,
+    ) -> dict:
         email = email or f"user-{uuid4().hex[:8]}@example.com"
-        response = await client.post(
-            "/api/v1/auth/register", json={"email": email, "password": password}
-        )
+        payload = {
+            "email": email,
+            "password": password,
+            "accept_terms": True,
+            "accept_privacy_policy": True,
+            "accept_personal_data_processing": True,
+            "accept_program_rules": True,
+            "confirm_age_18": True,
+        }
+        if referral_code is not None:
+            payload["referral_code"] = referral_code
+        response = await client.post("/api/v1/auth/register", json=payload)
         assert response.status_code == 201, response.text
+        token = response.json().get("debug_verification_token")
+        assert token, response.text
+        verification = await client.post(
+            "/api/v1/auth/email-verification/confirm", json={"token": token}
+        )
+        assert verification.status_code == 200, verification.text
         login = await client.post(
             "/api/v1/auth/login", json={"email": email, "password": password}
         )
@@ -88,6 +121,8 @@ async def make_account(client):
             "password": password,
             "access_token": login.json()["access_token"],
             "refresh_token": login.json()["refresh_token"],
+            "referral_code": me.json()["referral_code"],
+            "referred_by_user_id": me.json()["referred_by_user_id"],
             "headers": {"Authorization": f"Bearer {login.json()['access_token']}"},
         }
 
@@ -105,6 +140,7 @@ async def admin_account(client):
             role=UserRole.ADMIN,
             is_active=True,
             is_frozen=False,
+            email_verified_at=utcnow(),
         )
         session.add(user)
         await session.flush()
@@ -127,11 +163,9 @@ async def admin_account(client):
 @pytest_asyncio.fixture
 async def create_plan(client, admin_account):
     async def factory(**overrides) -> dict:
-        suffix = uuid4().hex[:8]
         payload = {
-            "title": "Игровая подписка",
-            "slug": f"game-plan-{suffix}",
-            "category": "game",
+            "title": "Стартовая программа",
+            "tier": "starter",
             "short_description": "Короткое описание",
             "full_description": "Полное описание тарифа",
             "image_url": None,

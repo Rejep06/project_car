@@ -1,19 +1,18 @@
-"""Схемы тарифов подписки."""
+"""Схемы клиентских программ."""
 
 from datetime import datetime
 from uuid import UUID
 
 from pydantic import Field, field_validator
 
-from app.db.enums import DurationUnit, PlanCategory, RewardFrequency
+from app.db.enums import DurationUnit, PlanTier, RewardFrequency
 from app.schemas.common import APIModel
 from app.utils.money import format_amount, parse_amount
 
 
 class PlanBase(APIModel):
     title: str = Field(min_length=1, max_length=200)
-    slug: str = Field(pattern=r"^[a-z0-9]+(?:-[a-z0-9]+)*$", max_length=200)
-    category: PlanCategory
+    tier: PlanTier
     short_description: str = Field(default="", max_length=500)
     full_description: str = ""
     image_url: str | None = Field(default=None, max_length=1000)
@@ -36,13 +35,12 @@ class PlanBase(APIModel):
 
 
 class PlanCreate(PlanBase):
-    """Полный набор полей нового тарифа."""
+    """Полный набор полей новой программы."""
 
 
 class PlanUpdate(APIModel):
     title: str | None = Field(default=None, min_length=1, max_length=200)
-    slug: str | None = Field(default=None, pattern=r"^[a-z0-9]+(?:-[a-z0-9]+)*$", max_length=200)
-    category: PlanCategory | None = None
+    tier: PlanTier | None = None
     short_description: str | None = Field(default=None, max_length=500)
     full_description: str | None = None
     image_url: str | None = Field(default=None, max_length=1000)
@@ -68,8 +66,7 @@ class PlanUpdate(APIModel):
 class PlanRead(APIModel):
     id: UUID
     title: str
-    slug: str
-    category: PlanCategory
+    tier: PlanTier
     short_description: str
     full_description: str
     image_url: str | None
@@ -90,8 +87,7 @@ class PlanRead(APIModel):
         return cls(
             id=getattr(plan, "id"),
             title=getattr(plan, "title"),
-            slug=getattr(plan, "slug"),
-            category=getattr(plan, "category"),
+            tier=getattr(plan, "tier"),
             short_description=getattr(plan, "short_description"),
             full_description=getattr(plan, "full_description"),
             image_url=getattr(plan, "image_url"),

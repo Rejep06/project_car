@@ -2,14 +2,14 @@
 
 import pytest
 
-TRON_ADDRESS = "T" + "B" * 33
+ETHEREUM_ADDRESS = "0x" + "b" * 40
 
 
 async def create_withdrawal(client, user, amount="20.000000"):
     response = await client.post(
         "/api/v1/wallet/withdrawals",
         headers=user["headers"],
-        json={"destination_address": TRON_ADDRESS, "amount": amount},
+        json={"destination_address": ETHEREUM_ADDRESS, "amount": amount},
     )
     assert response.status_code == 201, response.text
     return response.json()

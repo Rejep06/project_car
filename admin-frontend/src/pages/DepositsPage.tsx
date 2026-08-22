@@ -44,7 +44,7 @@ export function DepositsPage() {
     <>
       <PageHeader
         title="Нераспознанные пополнения"
-        description="Поиск и фильтры применяются к текущей странице: backend пока не принимает эти query-параметры."
+        description="Проверяйте нераспознанные переводы и связывайте их с нужными заявками."
       />
       <div className="filter-bar">
         <label>
@@ -98,7 +98,7 @@ export function DepositsPage() {
             <thead>
               <tr>
                 <th>TxID</th>
-                <th>Binance ID</th>
+                <th>Событие</th>
                 <th>Сумма</th>
                 <th>Сеть</th>
                 <th>Причина</th>
@@ -113,10 +113,10 @@ export function DepositsPage() {
                   <td className="mono truncate" title={x.txid}>
                     {x.txid}
                   </td>
-                  <td className="mono truncate" title={x.binance_deposit_id}>
-                    {x.binance_deposit_id}
+                  <td className="mono truncate" title={x.event_id}>
+                    {x.event_id}
                   </td>
-                  <td>{formatMoney(x.amount)} USDT</td>
+                  <td>{formatMoney(x.amount)} {x.asset}</td>
                   <td>{x.network}</td>
                   <td>{label(x.reason)}</td>
                   <td>

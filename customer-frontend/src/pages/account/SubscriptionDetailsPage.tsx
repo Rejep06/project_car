@@ -8,6 +8,7 @@ import { MoneyValue } from "../../components/MoneyValue";
 import { StatusBadge } from "../../components/StatusBadge";
 import { formatDate } from "../../utils/date";
 import { multiplyMoney } from "../../utils/money";
+import { planTierLabels } from "../../utils/programs";
 import { frequencyLabels } from "../../utils/rewards";
 export function SubscriptionDetailsPage() {
   const { id = "" } = useParams();
@@ -26,7 +27,9 @@ export function SubscriptionDetailsPage() {
       <Link to="/account/subscriptions">← Мои программы</Link>
       <div className="page-title">
         <div>
-          <p className="eyebrow">Купленная программа</p>
+          <p className={`program-tier program-tier-${item.plan_tier}`}>
+            {planTierLabels[item.plan_tier]}
+          </p>
           <h1>{item.plan_title}</h1>
         </div>
         <StatusBadge status={item.status} />

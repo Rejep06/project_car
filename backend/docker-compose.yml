@@ -1,49 +1,84 @@
+# Backend-only окружение для локальной разработки.
+# Полный production-стек запускается из корневого docker-compose.yml.
 services:
   db:
     image: postgres:16-alpine
+    restart: ${DOCKER_RESTART_POLICY:-unless-stopped}
     environment:
-      POSTGRES_DB: subscriptions
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: ${POSTGRES_DB:-subscriptions}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:
-      - "127.0.0.1:5432:5432"
+      - "${POSTGRES_BIND_HOST:-127.0.0.1}:${POSTGRES_PORT:-5432}:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d subscriptions"]
+      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\""]
       interval: 5s
       timeout: 5s
       retries: 10
 
   api:
     build: .
+    restart: ${DOCKER_RESTART_POLICY:-unless-stopped}
     env_file: .env
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000
     ports:
-      - "8000:8000"
+      - "${API_BIND_HOST:-127.0.0.1}:${API_PORT:-8000}:8000"
     volumes:
       - .:/app
       - support_uploads:/app/uploads/support
+    dns:
+      - "${DOCKER_DNS_PRIMARY:-1.1.1.1}"
+      - "${DOCKER_DNS_SECONDARY:-8.8.8.8}"
     depends_on:
       db:
         condition: service_healthy
 
   deposit-worker:
     build: .
+    restart: ${DOCKER_RESTART_POLICY:-unless-stopped}
     env_file: .env
     command: python -m app.workers.deposit_worker
     volumes:
       - .:/app
+    dns:
+      - "${DOCKER_DNS_PRIMARY:-1.1.1.1}"
+      - "${DOCKER_DNS_SECONDARY:-8.8.8.8}"
     depends_on:
       db:
         condition: service_healthy
 
   reward-worker:
     build: .
+    restart: ${DOCKER_RESTART_POLICY:-unless-stopped}
     env_file: .env
     command: python -m app.workers.reward_worker
     volumes:
       - .:/app
+    dns:
+      - "${DOCKER_DNS_PRIMARY:-1.1.1.1}"
+      - "${DOCKER_DNS_SECONDARY:-8.8.8.8}"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  email-worker:
+    build: .
+    restart: ${DOCKER_RESTART_POLICY:-unless-stopped}
+    env_file: .env
+    command: python -m app.workers.email_worker
+    volumes:
+      - .:/app
+    dns:
+      - "${DOCKER_DNS_PRIMARY:-1.1.1.1}"
+      - "${DOCKER_DNS_SECONDARY:-8.8.8.8}"
+    healthcheck:
+      test: ["CMD", "python", "-m", "app.workers.email_worker", "--check"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 20s
     depends_on:
       db:
         condition: service_healthy

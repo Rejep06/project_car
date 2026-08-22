@@ -13,7 +13,7 @@ from app.core.config import Settings, get_settings
 from app.core.exceptions import AppError
 from app.db.enums import SupportTicketStatus, UnmatchedDepositStatus, UserRole
 from app.db.models import (
-    BinanceDeposit,
+    BlockchainDeposit,
     DepositInvoice,
     SupportAttachment,
     SupportMessage,
@@ -85,7 +85,7 @@ class SupportService:
             subject=subject,
             status=SupportTicketStatus.OPEN,
             related_deposit_invoice_id=related_deposit_invoice_id,
-            related_binance_deposit_id=deposit_id,
+            related_blockchain_deposit_id=deposit_id,
             related_unmatched_deposit_id=unmatched_id,
             txid_conflict=conflict,
         )
@@ -107,9 +107,9 @@ class SupportService:
         return select(SupportTicket).options(
             joinedload(SupportTicket.user),
             joinedload(SupportTicket.related_deposit_invoice),
-            joinedload(SupportTicket.related_binance_deposit),
+            joinedload(SupportTicket.related_blockchain_deposit),
             joinedload(SupportTicket.related_unmatched_deposit).joinedload(
-                UnmatchedDeposit.binance_deposit
+                UnmatchedDeposit.blockchain_deposit
             ),
             selectinload(SupportTicket.messages).joinedload(SupportMessage.author),
             selectinload(SupportTicket.messages).selectinload(
@@ -200,7 +200,7 @@ class SupportService:
         ticket = await session.scalar(
             select(SupportTicket)
             .where(SupportTicket.id == ticket_id)
-            .with_for_update()
+            .with_for_update(of=SupportTicket)
         )
         if ticket is None:
             raise AppError("support_ticket_not_found", "Обращение не найдено", status_code=404)
@@ -213,8 +213,8 @@ class SupportService:
             deposit_id, unmatched_id, conflict = await SupportService._resolve_txid_links(
                 session, user_id=ticket.user_id, txid=txid
             )
-            ticket.related_binance_deposit_id = (
-                ticket.related_binance_deposit_id or deposit_id
+            ticket.related_blockchain_deposit_id = (
+                ticket.related_blockchain_deposit_id or deposit_id
             )
             ticket.related_unmatched_deposit_id = (
                 ticket.related_unmatched_deposit_id or unmatched_id
@@ -264,14 +264,14 @@ class SupportService:
                 selectinload(SupportMessage.attachments),
             )
             .where(SupportMessage.id == message_id)
-            .with_for_update()
+            .with_for_update(of=SupportMessage)
         )
         if message is None:
             raise AppError("support_message_not_found", "Сообщение не найдено", status_code=404)
         ticket = await session.scalar(
             select(SupportTicket)
             .where(SupportTicket.id == message.ticket_id)
-            .with_for_update()
+            .with_for_update(of=SupportTicket)
         )
         assert ticket is not None
         is_admin = requester.role == UserRole.ADMIN
@@ -377,7 +377,7 @@ class SupportService:
         ticket = await session.scalar(
             select(SupportTicket)
             .where(SupportTicket.id == ticket_id)
-            .with_for_update()
+            .with_for_update(of=SupportTicket)
         )
         if ticket is None:
             raise AppError("support_ticket_not_found", "Обращение не найдено", status_code=404)
@@ -430,7 +430,7 @@ class SupportService:
         ticket = await session.scalar(
             select(SupportTicket)
             .where(SupportTicket.id == ticket_id)
-            .with_for_update()
+            .with_for_update(of=SupportTicket)
         )
         assert ticket is not None
         old_status = ticket.status

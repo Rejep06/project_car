@@ -44,8 +44,8 @@ class SupportTicket(TimestampMixin, Base):
     related_deposit_invoice_id: Mapped[UUID | None] = mapped_column(
         Uuid(as_uuid=True), ForeignKey("deposit_invoices.id", ondelete="SET NULL"), nullable=True
     )
-    related_binance_deposit_id: Mapped[UUID | None] = mapped_column(
-        Uuid(as_uuid=True), ForeignKey("binance_deposits.id", ondelete="SET NULL"), nullable=True
+    related_blockchain_deposit_id: Mapped[UUID | None] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("blockchain_deposits.id", ondelete="SET NULL"), nullable=True
     )
     related_unmatched_deposit_id: Mapped[UUID | None] = mapped_column(
         Uuid(as_uuid=True), ForeignKey("unmatched_deposits.id", ondelete="SET NULL"), nullable=True
@@ -55,7 +55,7 @@ class SupportTicket(TimestampMixin, Base):
 
     user = relationship("User", lazy="joined")
     related_deposit_invoice = relationship("DepositInvoice", lazy="joined")
-    related_binance_deposit = relationship("BinanceDeposit", lazy="joined")
+    related_blockchain_deposit = relationship("BlockchainDeposit", lazy="joined")
     related_unmatched_deposit = relationship("UnmatchedDeposit", lazy="joined")
     messages = relationship(
         "SupportMessage",

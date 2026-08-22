@@ -12,7 +12,7 @@ from app.db.enums import WalletOperationType, WithdrawalStatus
 from app.db.models import User, WithdrawalRequest
 from app.services.audit_service import AuditService
 from app.services.wallet_service import WalletService
-from app.utils.datetime import utcnow
+from app.utils.datetime import get_withdrawal_window, utcnow
 from app.utils.money import MAX_ATOMIC, format_amount, parse_amount
 
 
@@ -28,7 +28,22 @@ class WithdrawalService:
     ) -> WithdrawalRequest:
         settings = settings or get_settings()
         if user.is_frozen:
-            raise AppError("user_frozen", "Операции пользователя заморожены", status_code=403)
+            raise AppError("user_frozen", "Операции пользователя временно недоступны", status_code=403)
+        window = get_withdrawal_window(
+            timezone_name=settings.business_timezone,
+            allowed_weekday=settings.withdrawal_allowed_weekday,
+        )
+        if not window.is_open:
+            next_date = (
+                window.next_open_at.astimezone(window.local_now.tzinfo).strftime("%d.%m.%Y")
+                if window.next_open_at is not None
+                else "в следующую среду"
+            )
+            raise AppError(
+                "withdrawal_day_closed",
+                f"Заявку на вывод можно подать каждую среду. Ближайшая дата: {next_date}",
+                status_code=409,
+            )
         amount_atomic = parse_amount(amount)
         if amount_atomic < settings.min_withdrawal_amount_atomic:
             raise AppError(
@@ -120,7 +135,7 @@ class WithdrawalService:
                 WithdrawalRequest.id == withdrawal_id,
                 WithdrawalRequest.user_id == user_id,
             )
-            .with_for_update()
+            .with_for_update(of=WithdrawalRequest)
         )
         if item is None:
             raise AppError("withdrawal_not_found", "Заявка на вывод не найдена", status_code=404)
@@ -129,7 +144,7 @@ class WithdrawalService:
         if item.status != WithdrawalStatus.PENDING_REVIEW:
             raise AppError(
                 "withdrawal_cannot_be_cancelled",
-                "Заявку можно отменить только до подтверждения администратором",
+                "Эту заявку уже нельзя отменить",
                 status_code=409,
             )
         await WalletService.apply_change(
@@ -187,7 +202,7 @@ class WithdrawalService:
         item = await session.scalar(
             select(WithdrawalRequest)
             .where(WithdrawalRequest.id == withdrawal_id)
-            .with_for_update()
+            .with_for_update(of=WithdrawalRequest)
         )
         if item is None:
             raise AppError("withdrawal_not_found", "Заявка на вывод не найдена", status_code=404)
@@ -225,7 +240,7 @@ class WithdrawalService:
         item = await session.scalar(
             select(WithdrawalRequest)
             .where(WithdrawalRequest.id == withdrawal_id)
-            .with_for_update()
+            .with_for_update(of=WithdrawalRequest)
         )
         if item is None:
             raise AppError("withdrawal_not_found", "Заявка на вывод не найдена", status_code=404)
@@ -279,7 +294,7 @@ class WithdrawalService:
         item = await session.scalar(
             select(WithdrawalRequest)
             .where(WithdrawalRequest.id == withdrawal_id)
-            .with_for_update()
+            .with_for_update(of=WithdrawalRequest)
         )
         if item is None:
             raise AppError("withdrawal_not_found", "Заявка на вывод не найдена", status_code=404)
@@ -353,7 +368,7 @@ class WithdrawalService:
         item = await session.scalar(
             select(WithdrawalRequest)
             .where(WithdrawalRequest.id == withdrawal_id)
-            .with_for_update()
+            .with_for_update(of=WithdrawalRequest)
         )
         if item is None:
             raise AppError("withdrawal_not_found", "Заявка на вывод не найдена", status_code=404)
@@ -375,7 +390,7 @@ class WithdrawalService:
             idempotency_key=f"withdrawal:complete:{item.id}",
             related_entity_type="withdrawal_request",
             related_entity_id=item.id,
-            description="Завершение ручного вывода USDT TRC20",
+            description="Завершение ручного вывода USDT ERC-20",
             metadata_json={
                 "txid": item.txid,
                 "final_debit": format_amount(final_total),

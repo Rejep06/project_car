@@ -81,7 +81,7 @@ describe("пополнения, поддержка и выводы", () => {
       `/account/deposits/${invoice().id}`,
     );
     expect(await screen.findAllByText("100.347000")).not.toHaveLength(0);
-    expect(screen.getByText("TRON (TRC20)")).toBeInTheDocument();
+    expect(screen.getByText("Ethereum (ERC-20)")).toBeInTheDocument();
   });
 
   it("11. показывается основной срок 30 минут", () => {
@@ -198,8 +198,8 @@ describe("пополнения, поддержка и выводы", () => {
     vi.stubGlobal("fetch", fetchMock);
     wrap(<WithdrawalsPage />);
     await userEvent.type(
-      await screen.findByLabelText("Адрес TRON"),
-      `T${"B".repeat(33)}`,
+      await screen.findByLabelText("Адрес Ethereum"),
+      `0x${"b".repeat(40)}`,
     );
     await userEvent.type(
       screen.getByLabelText(/Сумма, которую вы получите/),

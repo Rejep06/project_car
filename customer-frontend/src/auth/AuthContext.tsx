@@ -8,7 +8,8 @@ import {
   type ReactNode,
 } from "react";
 import * as authApi from "../api/auth";
-import type { User } from "../api/types";
+import type { RegistrationConsents } from "../api/auth";
+import type { RegistrationResponse, User } from "../api/types";
 import { getMe } from "../api/users";
 import { tokenStore } from "./tokenStore";
 
@@ -16,7 +17,12 @@ interface AuthValue {
   user: User | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<User>;
-  register: (email: string, password: string) => Promise<User>;
+  register: (
+    email: string,
+    password: string,
+    consents: RegistrationConsents,
+    referralCode?: string,
+  ) => Promise<RegistrationResponse>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<User>;
 }
@@ -46,11 +52,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       try {
-        // getMe сам обновит access token через refresh token при ответе 401.
         const current = await getMe();
         if (active) setUser(current);
       } catch {
-        // Невалидный refresh token уже очищается в API-клиенте.
         if (active) setUser(null);
       } finally {
         if (active) setLoading(false);
@@ -73,11 +77,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   const register = useCallback(
-    async (email: string, password: string) => {
-      await authApi.register(email, password);
-      return login(email, password);
-    },
-    [login],
+    async (
+      email: string,
+      password: string,
+      consents: RegistrationConsents,
+      referralCode?: string,
+    ) => authApi.register(email, password, consents, referralCode),
+    [],
   );
 
   const logout = useCallback(async () => {

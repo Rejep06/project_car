@@ -1,12 +1,12 @@
-"""Схемы заявок на пополнение и ручного разбора депозитов."""
+"""Схемы заявок на пополнение и ручного разбора переводов."""
 
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import Field, field_validator
+from pydantic import field_validator
 
 from app.db.enums import (
-    BinanceDepositStatus,
+    BlockchainDepositStatus,
     DepositInvoiceStatus,
     UnmatchedDepositReason,
     UnmatchedDepositStatus,
@@ -15,14 +15,14 @@ from app.schemas.common import APIModel
 from app.utils.money import format_amount, parse_amount
 
 DEPOSIT_WARNING = (
-    "Отправьте точную сумму через сеть TRON (TRC20). "
-    "Проверьте, сколько получит адрес после комиссии биржи. "
-    "Перевод через другую сеть может быть потерян."
+    "Переведите точную сумму на указанный адрес в выбранной сети. "
+    "Сумма, которая поступит после комиссии отправителя, должна совпасть полностью."
 )
 
 
 class DepositInvoiceCreate(APIModel):
     amount: str
+    deposit_wallet_id: UUID | None = None
 
     @field_validator("amount")
     @classmethod
@@ -35,6 +35,8 @@ class DepositInvoiceCreate(APIModel):
 
 class DepositInvoiceRead(APIModel):
     id: UUID
+    deposit_wallet_id: UUID | None
+    wallet_name: str
     asset: str
     network: str
     address: str
@@ -52,10 +54,13 @@ class DepositInvoiceRead(APIModel):
     @classmethod
     def from_invoice(cls, invoice: object, network_display_name: str) -> "DepositInvoiceRead":
         received = getattr(invoice, "received_amount_atomic")
+        wallet = getattr(invoice, "deposit_wallet", None)
         return cls(
             id=getattr(invoice, "id"),
+            deposit_wallet_id=getattr(invoice, "deposit_wallet_id", None),
+            wallet_name=getattr(wallet, "title", None) or "Кошелёк пополнения",
             asset=getattr(invoice, "asset"),
-            network=network_display_name,
+            network=getattr(wallet, "network_display_name", None) or network_display_name,
             address=getattr(invoice, "deposit_address"),
             requested_amount=format_amount(getattr(invoice, "requested_amount_atomic")),
             expected_amount=format_amount(getattr(invoice, "expected_amount_atomic")),
@@ -71,14 +76,21 @@ class DepositInvoiceRead(APIModel):
 
 class UnmatchedDepositRead(APIModel):
     id: UUID
-    binance_record_id: UUID
-    binance_deposit_id: str
+    blockchain_record_id: UUID
+    event_id: str
     txid: str
-    coin: str
+    log_index: int
+    block_number: int | None
+    block_hash: str | None
+    from_address: str | None
+    asset: str
     amount: str
     address: str
     network: str
-    binance_status: BinanceDepositStatus
+    provider: str
+    token_contract_address: str | None
+    deposit_status: BlockchainDepositStatus
+    confirmations: int
     deposit_time: datetime
     credited_at: datetime | None
     txid_already_used: bool
@@ -91,17 +103,24 @@ class UnmatchedDepositRead(APIModel):
 
     @classmethod
     def from_unmatched(cls, item: object) -> "UnmatchedDepositRead":
-        deposit = getattr(item, "binance_deposit")
+        deposit = getattr(item, "blockchain_deposit")
         return cls(
             id=getattr(item, "id"),
-            binance_record_id=getattr(item, "binance_deposit_id"),
-            binance_deposit_id=getattr(deposit, "binance_deposit_id"),
+            blockchain_record_id=getattr(item, "blockchain_deposit_id"),
+            event_id=getattr(deposit, "external_id"),
             txid=getattr(item, "txid"),
-            coin=getattr(deposit, "coin"),
+            log_index=getattr(deposit, "log_index"),
+            block_number=getattr(deposit, "block_number"),
+            block_hash=getattr(deposit, "block_hash"),
+            from_address=getattr(deposit, "from_address"),
+            asset=getattr(deposit, "asset"),
             amount=format_amount(getattr(item, "amount_atomic")),
             address=getattr(item, "address"),
             network=getattr(item, "network"),
-            binance_status=getattr(deposit, "status"),
+            provider=getattr(deposit, "provider"),
+            token_contract_address=getattr(deposit, "token_contract_address"),
+            deposit_status=getattr(deposit, "status"),
+            confirmations=getattr(deposit, "confirmations"),
             deposit_time=getattr(deposit, "detected_at"),
             credited_at=getattr(deposit, "credited_at"),
             txid_already_used=getattr(deposit, "credited_at") is not None,

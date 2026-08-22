@@ -1,41 +1,51 @@
+import { Gift, Sparkles } from "lucide-react";
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
 import type { WalletTransaction } from "../../api/types";
 import { listTransactions } from "../../api/wallet";
+import { Card } from "../../components/Card";
 import { EmptyState } from "../../components/EmptyState";
 import { LoadingSpinner } from "../../components/LoadingSpinner";
 import { MoneyValue } from "../../components/MoneyValue";
 import { formatDate } from "../../utils/date";
+
 export function RewardsPage() {
   const [items, setItems] = useState<WalletTransaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+
   useEffect(() => {
     listTransactions(1, 100)
-      .then((d) =>
+      .then((data) =>
         setItems(
-          d.items.filter((item) => item.operation_type === "reward_credit"),
+          data.items.filter((item) =>
+            ["reward_credit", "referral_reward_bonus"].includes(item.operation_type),
+          ),
         ),
       )
       .catch((e: Error) => setError(e.message))
       .finally(() => setLoading(false));
   }, []);
+
   return (
     <div className="account-page">
       <div className="page-title">
         <div>
-          <p className="eyebrow">Reward payout</p>
-          <h1>Полученные вознаграждения по программам</h1>
+          <p className="eyebrow">История начислений</p>
+          <h1>Вознаграждения</h1>
         </div>
-        <Link className="button button-secondary" to="/account/subscriptions">
-          Будущие графики
-        </Link>
       </div>
-      <div className="notice info">
-        Здесь отображаются фактически начисленные вознаграждения по вашим
-        клиентским программам. Будущий график начислений доступен внутри
-        каждой программы.
-      </div>
+
+      <Card className="rewards-intro-card">
+        <Gift />
+        <div>
+          <h2>Все полученные вознаграждения в одном месте</h2>
+          <p>
+            Здесь отображаются начисления по активированным программам и
+            дополнительные премиальные реферальные бонусы.
+          </p>
+        </div>
+      </Card>
+
       {loading ? (
         <LoadingSpinner />
       ) : error ? (
@@ -45,6 +55,7 @@ export function RewardsPage() {
           <table>
             <thead>
               <tr>
+                <th>Тип</th>
                 <th>Описание</th>
                 <th>Сумма</th>
                 <th>Баланс после</th>
@@ -54,13 +65,18 @@ export function RewardsPage() {
             <tbody>
               {items.map((tx) => (
                 <tr key={tx.id}>
+                  <td>
+                    <span className={`reward-type ${tx.operation_type === "referral_reward_bonus" ? "premium" : "program"}`}>
+                      {tx.operation_type === "referral_reward_bonus" ? (
+                        <><Sparkles size={15} /> Премиум-бонус</>
+                      ) : (
+                        <><Gift size={15} /> По программе</>
+                      )}
+                    </span>
+                  </td>
                   <td>{tx.description}</td>
-                  <td>
-                    <MoneyValue value={tx.available_delta} signed />
-                  </td>
-                  <td>
-                    <MoneyValue value={tx.available_after} />
-                  </td>
+                  <td><MoneyValue value={tx.available_delta} signed /></td>
+                  <td><MoneyValue value={tx.available_after} /></td>
                   <td>{formatDate(tx.created_at)}</td>
                 </tr>
               ))}
@@ -70,7 +86,7 @@ export function RewardsPage() {
       ) : (
         <EmptyState
           title="Вознаграждений пока нет"
-          text="После обработки reward worker операции появятся здесь."
+          text="После первого начисления оно появится в этом разделе."
         />
       )}
     </div>

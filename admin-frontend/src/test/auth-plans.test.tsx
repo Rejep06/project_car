@@ -80,15 +80,15 @@ describe("авторизация администратора", () => {
   });
 });
 
-describe("управление подписками", () => {
-  it("4. загружается список подписок", async () => {
+describe("управление программами", () => {
+  it("4. загружается список программ", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValue(await json(page([plan])));
     renderRoute(<PlansPage />);
     expect(await screen.findByText("Программа Standard")).toBeInTheDocument();
     expect(screen.getByText("100.000000 USDT")).toBeInTheDocument();
   });
 
-  it("5. создаётся подписка", async () => {
+  it("5. создаётся программа", async () => {
     let sent: unknown;
     vi.spyOn(globalThis, "fetch").mockImplementation(async (_input, init) => {
       sent = init?.body ? JSON.parse(String(init.body)) : null;
@@ -99,7 +99,6 @@ describe("управление подписками", () => {
       screen.getByLabelText("Название"),
       "Программа Standard",
     );
-    await userEvent.type(screen.getByLabelText(/^Slug/), "standard");
     await userEvent.type(
       screen.getByLabelText("Стоимость, USDT"),
       "100.000000",
@@ -114,13 +113,14 @@ describe("управление подписками", () => {
     await waitFor(() =>
       expect(sent).toMatchObject({
         title: "Программа Standard",
+        tier: "starter",
         price: "100.000000",
         reward_amount: "5.000000",
       }),
     );
   });
 
-  it("6. работает изменение подписки", async () => {
+  it("6. работает изменение программы", async () => {
     const fetchMock = vi.spyOn(globalThis, "fetch");
     fetchMock.mockImplementation((_input, init) =>
       init?.method === "PATCH"

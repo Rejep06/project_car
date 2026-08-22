@@ -16,6 +16,13 @@ import { StatusBadge } from "../../components/StatusBadge";
 import { showToast } from "../../components/Toast";
 import { formatDate } from "../../utils/date";
 
+const categoryLabels: Record<SupportTicket["category"], string> = {
+  deposit_problem: "Пополнение",
+  withdrawal_problem: "Вывод",
+  subscription_problem: "Программа",
+  other: "Другое",
+};
+
 export function SupportPage() {
   const [search] = useSearchParams();
   const [items, setItems] = useState<SupportTicket[]>([]);
@@ -121,7 +128,7 @@ export function SupportPage() {
                 <option value="deposit_problem">Проблема с пополнением</option>
                 <option value="withdrawal_problem">Проблема с выводом</option>
                 <option value="subscription_problem">
-                  Проблема с подпиской
+                  Проблема с программой
                 </option>
                 <option value="other">Другое</option>
               </select>
@@ -141,8 +148,8 @@ export function SupportPage() {
                   TxID
                   <input
                     required
-                    pattern="[0-9a-fA-F]{64}"
-                    placeholder="64 шестнадцатеричных символа"
+                    pattern="(?:0x)?[0-9a-fA-F]{64}"
+                    placeholder="0x… или 64 шестнадцатеричных символа"
                     value={txid}
                     onChange={(e) => setTxid(e.target.value)}
                   />
@@ -156,8 +163,7 @@ export function SupportPage() {
                     placeholder="100.000000"
                   />
                   <span className="field-hint">
-                    В системе нет отдельного поля: значение будет сохранено в
-                    первом сообщении.
+                    Укажите сумму, которая была фактически отправлена.
                   </span>
                 </label>
               </>
@@ -200,14 +206,14 @@ export function SupportPage() {
         <Card>
           <h2>Что подготовить</h2>
           <ul className="check-list">
-            <li>TxID из Binance или Bybit</li>
-            <li>Фактическую сумму перевода</li>
-            <li>ID связанной заявки</li>
+            <li>TxID перевода, если вопрос связан с пополнением</li>
+            <li>Фактическую сумму и дату операции</li>
+            <li>Номер связанной заявки</li>
             <li>Скриншот или PDF подтверждения</li>
           </ul>
           <p>
-            Сообщение пользователя не зачисляет баланс автоматически.
-            Администратор проверяет реальный BinanceDeposit.
+            Чем подробнее описание и подтверждающие материалы, тем быстрее
+            специалисты смогут разобраться в ситуации.
           </p>
         </Card>
       </div>
@@ -234,7 +240,7 @@ export function SupportPage() {
                   <tr key={item.id}>
                     <td>{formatDate(item.created_at)}</td>
                     <td>{item.subject}</td>
-                    <td>{item.category}</td>
+                    <td>{categoryLabels[item.category]}</td>
                     <td>
                       <StatusBadge status={item.status} />
                     </td>
@@ -256,7 +262,7 @@ export function SupportPage() {
       ) : (
         <EmptyState
           title="Обращений пока нет"
-          text="Используйте форму, если автоматическая операция не завершилась."
+          text="Создайте обращение, когда вам потребуется помощь специалиста."
         />
       )}
     </div>

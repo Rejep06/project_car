@@ -34,6 +34,11 @@ def hash_refresh_token(token: str) -> str:
     return hashlib.sha256(token.encode("utf-8")).hexdigest()
 
 
+def hash_action_token(token: str) -> str:
+    """Хеширует одноразовый токен подтверждения email или сброса пароля."""
+    return hashlib.sha256(token.encode("utf-8")).hexdigest()
+
+
 def create_access_token(user_id: UUID, role: str) -> tuple[str, int]:
     """Создаёт короткоживущий access token и возвращает TTL в секундах."""
     settings = get_settings()

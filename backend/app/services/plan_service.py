@@ -1,24 +1,33 @@
-"""Управление тарифами без удаления уже купленных планов."""
+"""Управление клиентскими программами без удаления уже активированных записей."""
 
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import func, select
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy import case, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import AppError
+from app.db.enums import PlanTier
 from app.db.models import SubscriptionPlan
 from app.schemas.plan import PlanCreate, PlanUpdate
 from app.services.audit_service import AuditService
 from app.utils.money import format_amount, parse_amount
 
 
+TIER_ORDER = case(
+    (SubscriptionPlan.tier == PlanTier.STARTER, 1),
+    (SubscriptionPlan.tier == PlanTier.STANDARD, 2),
+    (SubscriptionPlan.tier == PlanTier.PREMIUM, 3),
+    else_=4,
+)
+
+
 def plan_snapshot(plan: SubscriptionPlan) -> dict[str, Any]:
     return {
         "title": plan.title,
-        "slug": plan.slug,
-        "category": plan.category.value,
+        "tier": plan.tier.value,
+        "short_description": plan.short_description,
+        "image_url": plan.image_url,
         "price": format_amount(plan.price_atomic),
         "reward_amount": format_amount(plan.reward_amount_atomic),
         "reward_frequency": plan.reward_frequency.value,
@@ -31,32 +40,36 @@ class PlanService:
     async def list_public(
         session: AsyncSession, *, offset: int, limit: int
     ) -> tuple[list[SubscriptionPlan], int]:
-        stmt = (
-            select(SubscriptionPlan)
-            .where(SubscriptionPlan.is_active.is_(True))
-            .order_by(SubscriptionPlan.created_at.desc())
-            .offset(offset)
-            .limit(limit)
+        condition = SubscriptionPlan.is_active.is_(True)
+        items = list(
+            (
+                await session.scalars(
+                    select(SubscriptionPlan)
+                    .where(condition)
+                    .order_by(TIER_ORDER, SubscriptionPlan.price_atomic)
+                    .offset(offset)
+                    .limit(limit)
+                )
+            ).all()
         )
-        items = list((await session.scalars(stmt)).all())
         total = int(
             await session.scalar(
-                select(func.count()).select_from(SubscriptionPlan).where(SubscriptionPlan.is_active.is_(True))
+                select(func.count()).select_from(SubscriptionPlan).where(condition)
             )
             or 0
         )
         return items, total
 
     @staticmethod
-    async def get_public_by_slug(session: AsyncSession, slug: str) -> SubscriptionPlan:
+    async def get_public(session: AsyncSession, plan_id: UUID) -> SubscriptionPlan:
         plan = await session.scalar(
             select(SubscriptionPlan).where(
-                SubscriptionPlan.slug == slug,
+                SubscriptionPlan.id == plan_id,
                 SubscriptionPlan.is_active.is_(True),
             )
         )
         if plan is None:
-            raise AppError("plan_not_found", "Тариф не найден", status_code=404)
+            raise AppError("plan_not_found", "Программа не найдена", status_code=404)
         return plan
 
     @staticmethod
@@ -67,7 +80,7 @@ class PlanService:
             (
                 await session.scalars(
                     select(SubscriptionPlan)
-                    .order_by(SubscriptionPlan.created_at.desc())
+                    .order_by(TIER_ORDER, SubscriptionPlan.created_at.desc())
                     .offset(offset)
                     .limit(limit)
                 )
@@ -80,7 +93,7 @@ class PlanService:
     async def get_admin(session: AsyncSession, plan_id: UUID) -> SubscriptionPlan:
         plan = await session.get(SubscriptionPlan, plan_id)
         if plan is None:
-            raise AppError("plan_not_found", "Тариф не найден", status_code=404)
+            raise AppError("plan_not_found", "Программа не найдена", status_code=404)
         return plan
 
     @staticmethod
@@ -93,8 +106,7 @@ class PlanService:
     ) -> SubscriptionPlan:
         plan = SubscriptionPlan(
             title=data.title,
-            slug=data.slug,
-            category=data.category,
+            tier=data.tier,
             short_description=data.short_description,
             full_description=data.full_description,
             image_url=data.image_url,
@@ -108,11 +120,7 @@ class PlanService:
             is_active=data.is_active,
         )
         session.add(plan)
-        try:
-            await session.flush()
-        except IntegrityError as exc:
-            await session.rollback()
-            raise AppError("plan_slug_exists", "Тариф с таким slug уже существует", status_code=409) from exc
+        await session.flush()
         await AuditService.record(
             session,
             admin_user_id=admin_user_id,
@@ -136,10 +144,10 @@ class PlanService:
         ip_address: str | None,
     ) -> SubscriptionPlan:
         plan = await session.scalar(
-            select(SubscriptionPlan).where(SubscriptionPlan.id == plan_id).with_for_update()
+            select(SubscriptionPlan).where(SubscriptionPlan.id == plan_id).with_for_update(of=SubscriptionPlan)
         )
         if plan is None:
-            raise AppError("plan_not_found", "Тариф не найден", status_code=404)
+            raise AppError("plan_not_found", "Программа не найдена", status_code=404)
         old_data = plan_snapshot(plan)
         changes = data.model_dump(exclude_unset=True)
         if "price" in changes:
@@ -148,11 +156,7 @@ class PlanService:
             plan.reward_amount_atomic = parse_amount(changes.pop("reward_amount"))
         for field, value in changes.items():
             setattr(plan, field, value)
-        try:
-            await session.flush()
-        except IntegrityError as exc:
-            await session.rollback()
-            raise AppError("plan_slug_exists", "Тариф с таким slug уже существует", status_code=409) from exc
+        await session.flush()
         await AuditService.record(
             session,
             admin_user_id=admin_user_id,
@@ -177,10 +181,10 @@ class PlanService:
         ip_address: str | None,
     ) -> SubscriptionPlan:
         plan = await session.scalar(
-            select(SubscriptionPlan).where(SubscriptionPlan.id == plan_id).with_for_update()
+            select(SubscriptionPlan).where(SubscriptionPlan.id == plan_id).with_for_update(of=SubscriptionPlan)
         )
         if plan is None:
-            raise AppError("plan_not_found", "Тариф не найден", status_code=404)
+            raise AppError("plan_not_found", "Программа не найдена", status_code=404)
         old_data = plan_snapshot(plan)
         plan.is_active = is_active
         await AuditService.record(

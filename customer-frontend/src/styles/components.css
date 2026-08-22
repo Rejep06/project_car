@@ -318,3 +318,131 @@
   line-height: 1.6;
   margin-top: 1.5rem;
 }
+
+.program-tier {
+  width: fit-content;
+  border-radius: 999px;
+  padding: 0.32rem 0.68rem;
+  margin-bottom: 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 850;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.program-tier-starter {
+  color: #31595b;
+  background: #e4f1ef;
+}
+.program-tier-standard {
+  color: #274d9c;
+  background: #e7eeff;
+}
+.program-tier-premium {
+  color: #755208;
+  background: #fff0c9;
+}
+.mobile-public-menu {
+  display: none;
+}
+
+.checkbox-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  font-weight: 500;
+  line-height: 1.5;
+  cursor: pointer;
+}
+.checkbox-row input {
+  width: 18px;
+  height: 18px;
+  margin-top: 0.15rem;
+  flex: 0 0 auto;
+  accent-color: var(--primary);
+}
+.checkbox-row span {
+  min-width: 0;
+}
+.legal-consents {
+  display: grid;
+  gap: 0.75rem;
+  padding: 1rem;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: #f8f9fb;
+}
+.form-row-link {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: -0.3rem;
+  font-size: 0.9rem;
+}
+.verification-card {
+  text-align: center;
+  justify-items: center;
+}
+.verification-card > svg {
+  color: var(--primary);
+}
+.auth-card-wide {
+  width: min(620px, 100%);
+}
+.email-state-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.7rem;
+}
+.email-state-notice svg {
+  flex: 0 0 auto;
+}
+.email-state-notice p {
+  margin: 0.25rem 0 0;
+}
+.email-verification-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+.nav-count {
+  margin-left: auto;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 0.38rem;
+  border-radius: 999px;
+  display: inline-grid;
+  place-items: center;
+  background: #e94b55;
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 850;
+}
+
+.legal-consents-heading {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.7rem;
+  padding-bottom: 0.8rem;
+  border-bottom: 1px solid var(--border);
+}
+.legal-consents-heading > svg {
+  flex: 0 0 auto;
+  color: var(--primary);
+  margin-top: 0.1rem;
+}
+.legal-consents-heading strong {
+  display: block;
+  color: var(--text);
+}
+.legal-consents-heading p {
+  margin: 0.15rem 0 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+.legal-consent-evidence {
+  margin: 0;
+  padding-top: 0.8rem;
+  border-top: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.55;
+}

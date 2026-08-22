@@ -11,6 +11,7 @@ from app.core.exceptions import AppError
 from app.db.enums import WalletOperationType
 from app.db.models import User
 from app.services.audit_service import AuditService
+from app.services.auth_service import AuthService
 from app.services.wallet_service import WalletService
 from app.utils.money import format_amount, parse_amount
 
@@ -18,17 +19,10 @@ from app.utils.money import format_amount, parse_amount
 class UserService:
     @staticmethod
     async def update_me(session: AsyncSession, *, user_id: UUID, email: str) -> User:
-        user = await session.scalar(select(User).where(User.id == user_id).with_for_update())
-        if user is None:
-            raise AppError("user_not_found", "Пользователь не найден", status_code=404)
-        user.email = email.strip().lower()
-        try:
-            await session.commit()
-        except IntegrityError as exc:
-            await session.rollback()
-            raise AppError("email_already_exists", "Этот email уже используется", status_code=409) from exc
-        await session.refresh(user)
-        return user
+        """Запрашивает подтверждение нового email, не меняя адрес немедленно."""
+        return await AuthService.request_email_change(
+            session, user_id=user_id, new_email=email
+        )
 
     @staticmethod
     async def list_users(
@@ -68,7 +62,7 @@ class UserService:
     ) -> User:
         if user_id == admin_user_id:
             raise AppError("self_freeze_forbidden", "Нельзя заморозить собственную учётную запись", status_code=409)
-        user = await session.scalar(select(User).where(User.id == user_id).with_for_update())
+        user = await session.scalar(select(User).where(User.id == user_id).with_for_update(of=User))
         if user is None:
             raise AppError("user_not_found", "Пользователь не найден", status_code=404)
         old = {"is_frozen": user.is_frozen}

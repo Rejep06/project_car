@@ -1,4 +1,4 @@
-"""Схемы обращений, сообщений и вложений поддержки."""
+"""Схемы обращений поддержки."""
 
 from datetime import datetime
 from typing import Any
@@ -7,7 +7,7 @@ from uuid import UUID
 from pydantic import Field, field_validator, model_validator
 
 from app.db.enums import (
-    BinanceDepositStatus,
+    BlockchainDepositStatus,
     SupportTicketCategory,
     SupportTicketStatus,
     UnmatchedDepositStatus,
@@ -31,7 +31,7 @@ class TicketCreate(APIModel):
     @model_validator(mode="after")
     def validate_deposit_problem(self) -> "TicketCreate":
         if self.category == SupportTicketCategory.DEPOSIT_PROBLEM and not self.txid:
-            raise ValueError("Для проблемы с пополнением необходимо указать TxID")
+            raise ValueError("Для проблемы с пополнением необходимо указать хеш транзакции")
         return self
 
 
@@ -125,13 +125,13 @@ class TicketRead(APIModel):
 class AdminTicketRead(TicketRead):
     expected_amount: str | None = None
     actual_amount: str | None = None
-    binance_deposit_id: str | None = None
-    binance_txid: str | None = None
-    binance_address: str | None = None
-    binance_network: str | None = None
-    binance_status: BinanceDepositStatus | None = None
-    binance_detected_at: datetime | None = None
-    binance_raw_data: dict[str, Any] | None = None
+    deposit_event_id: str | None = None
+    deposit_txid: str | None = None
+    deposit_address: str | None = None
+    deposit_network: str | None = None
+    deposit_status: BlockchainDepositStatus | None = None
+    deposit_detected_at: datetime | None = None
+    deposit_raw_data: dict[str, Any] | None = None
     txid_already_used: bool = False
     warning: str | None = None
 
@@ -139,11 +139,11 @@ class AdminTicketRead(TicketRead):
     def from_ticket(cls, ticket: object, prefix: str) -> "AdminTicketRead":
         base = TicketRead.from_ticket(ticket, prefix).model_dump()
         invoice = getattr(ticket, "related_deposit_invoice", None)
-        direct_deposit = getattr(ticket, "related_binance_deposit", None)
+        direct_deposit = getattr(ticket, "related_blockchain_deposit", None)
         unmatched = getattr(ticket, "related_unmatched_deposit", None)
         deposit = direct_deposit
         if deposit is None and unmatched is not None:
-            deposit = unmatched.binance_deposit
+            deposit = unmatched.blockchain_deposit
 
         actual_atomic = None
         if deposit is not None:
@@ -161,24 +161,18 @@ class AdminTicketRead(TicketRead):
         )
         return cls(
             **base,
-            expected_amount=(
-                format_amount(invoice.expected_amount_atomic) if invoice else None
-            ),
-            actual_amount=(
-                format_amount(actual_atomic) if actual_atomic is not None else None
-            ),
-            binance_deposit_id=(
-                deposit.binance_deposit_id if deposit is not None else None
-            ),
-            binance_txid=deposit.txid if deposit is not None else None,
-            binance_address=deposit.address if deposit is not None else None,
-            binance_network=deposit.network if deposit is not None else None,
-            binance_status=deposit.status if deposit is not None else None,
-            binance_detected_at=deposit.detected_at if deposit is not None else None,
-            binance_raw_data=deposit.raw_data if deposit is not None else None,
+            expected_amount=(format_amount(invoice.expected_amount_atomic) if invoice else None),
+            actual_amount=(format_amount(actual_atomic) if actual_atomic is not None else None),
+            deposit_event_id=(deposit.external_id if deposit is not None else None),
+            deposit_txid=deposit.txid if deposit is not None else None,
+            deposit_address=deposit.address if deposit is not None else None,
+            deposit_network=deposit.network if deposit is not None else None,
+            deposit_status=deposit.status if deposit is not None else None,
+            deposit_detected_at=deposit.detected_at if deposit is not None else None,
+            deposit_raw_data=deposit.raw_data if deposit is not None else None,
             txid_already_used=txid_already_used,
             warning=(
-                "TxID уже связан с зачислением другому пользователю; "
+                "Хеш транзакции уже связан с зачислением другому пользователю; "
                 "автоматическое изменение баланса запрещено"
                 if conflict
                 else None

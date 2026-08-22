@@ -1,4 +1,4 @@
-"""Надёжная обработка просроченных reward payout без двойного начисления."""
+"""Надёжная обработка начислений без двойного зачисления."""
 
 import logging
 from datetime import timedelta
@@ -7,8 +7,9 @@ from uuid import UUID
 from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from app.db.enums import RewardPayoutStatus, WalletOperationType
-from app.db.models import RewardPayout
+from app.core.config import get_settings
+from app.db.enums import PlanTier, RewardPayoutStatus, WalletOperationType
+from app.db.models import RewardPayout, User, UserSubscription
 from app.services.wallet_service import WalletService
 from app.utils.datetime import utcnow
 
@@ -20,7 +21,6 @@ class RewardService:
     async def claim_due_payouts(
         session: AsyncSession, *, batch_size: int
     ) -> list[UUID]:
-        """Захватывает порцию выплат через FOR UPDATE SKIP LOCKED."""
         now = utcnow()
         stale_before = now - timedelta(minutes=5)
         stmt = (
@@ -38,7 +38,7 @@ class RewardService:
                 ),
             )
             .order_by(RewardPayout.due_at)
-            .with_for_update(skip_locked=True)
+            .with_for_update(of=RewardPayout, skip_locked=True)
             .limit(batch_size)
         )
         payouts = list((await session.scalars(stmt)).all())
@@ -53,7 +53,7 @@ class RewardService:
         payout = await session.scalar(
             select(RewardPayout)
             .where(RewardPayout.id == payout_id)
-            .with_for_update()
+            .with_for_update(of=RewardPayout)
         )
         if payout is None or payout.status == RewardPayoutStatus.CANCELLED:
             return False
@@ -69,9 +69,35 @@ class RewardService:
             idempotency_key=f"reward:{payout.id}",
             related_entity_type="reward_payout",
             related_entity_id=payout.id,
-            description="Начисление периодического вознаграждения",
+            description="Начисление по клиентской программе",
             metadata_json={"user_subscription_id": str(payout.user_subscription_id)},
         )
+
+        subscription = await session.get(UserSubscription, payout.user_subscription_id)
+        if subscription is not None and subscription.plan_tier == PlanTier.PREMIUM:
+            referred_user = await session.get(User, payout.user_id)
+            settings = get_settings()
+            if (
+                referred_user is not None
+                and referred_user.referred_by_user_id is not None
+                and settings.premium_referral_reward_bonus_atomic > 0
+            ):
+                await WalletService.apply_change(
+                    session,
+                    user_id=referred_user.referred_by_user_id,
+                    operation_type=WalletOperationType.REFERRAL_REWARD_BONUS,
+                    available_delta_atomic=settings.premium_referral_reward_bonus_atomic,
+                    locked_delta_atomic=0,
+                    idempotency_key=f"referral:reward:{payout.id}",
+                    related_entity_type="reward_payout",
+                    related_entity_id=payout.id,
+                    description="Бонус за начисление приглашённого участника",
+                    metadata_json={
+                        "referred_user_id": str(payout.user_id),
+                        "user_subscription_id": str(payout.user_subscription_id),
+                    },
+                )
+
         payout.wallet_transaction_id = transaction.id
         payout.status = RewardPayoutStatus.PAID
         payout.paid_at = utcnow()
@@ -86,7 +112,7 @@ class RewardService:
         payout = await session.scalar(
             select(RewardPayout)
             .where(RewardPayout.id == payout_id)
-            .with_for_update()
+            .with_for_update(of=RewardPayout)
         )
         if payout is None or payout.status == RewardPayoutStatus.PAID:
             return
@@ -112,8 +138,8 @@ class RewardService:
                 async with session_factory() as session:
                     if await cls.process_one(session, payout_id):
                         processed += 1
-            except Exception as exc:  # Процесс должен продолжить обработку следующих выплат
-                logger.exception("Ошибка reward payout %s", payout_id)
+            except Exception as exc:
+                logger.exception("Ошибка начисления %s", payout_id)
                 async with session_factory() as failure_session:
                     await cls.mark_failed(failure_session, payout_id, exc)
         return processed

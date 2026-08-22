@@ -11,8 +11,10 @@ import { Card } from "../components/Card";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { LoadingSpinner } from "../components/LoadingSpinner";
 import { MoneyValue } from "../components/MoneyValue";
+import { ProgramImage } from "../components/ProgramImage";
 import { showToast } from "../components/Toast";
 import { compareMoney, subtractMoney } from "../utils/money";
+import { planTierLabels } from "../utils/programs";
 import {
   durationLabels,
   estimateRewardCount,
@@ -21,7 +23,7 @@ import {
 } from "../utils/rewards";
 
 export function PlanDetailsPage() {
-  const { slug = "" } = useParams();
+  const { id = "" } = useParams();
   const { user } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
@@ -33,14 +35,14 @@ export function PlanDetailsPage() {
   const [purchasing, setPurchasing] = useState(false);
   const idempotencyKey = useRef(crypto.randomUUID());
   useEffect(() => {
-    Promise.all([getPlan(slug), user ? getWallet() : Promise.resolve(null)])
+    Promise.all([getPlan(id), user ? getWallet() : Promise.resolve(null)])
       .then(([planData, walletData]) => {
         setPlan(planData);
         setWallet(walletData);
       })
       .catch((e: Error) => setError(e.message))
       .finally(() => setLoading(false));
-  }, [slug, user]);
+  }, [id, user]);
   if (loading)
     return (
       <div className="page-center">
@@ -89,7 +91,13 @@ export function PlanDetailsPage() {
     <section className="section page-hero">
       <div className="container plan-detail-grid">
         <div className="plan-detail-main">
-          <p className="eyebrow">Клиентская программа</p>
+          <ProgramImage
+            className="plan-detail-cover"
+            src={plan.image_url}
+            alt={`Фотография программы «${plan.title}»`}
+            loading="eager"
+          />
+          <p className={`program-tier program-tier-${plan.tier}`}>{planTierLabels[plan.tier]}</p>
           <h1>{plan.title}</h1>
           <p className="lead">{plan.short_description}</p>
           <div className="description-block">
@@ -135,8 +143,7 @@ export function PlanDetailsPage() {
               </strong>
             </p>
             <p className="small muted">
-              Точный календарный график создаётся системой в момент активации программы и
-              доступен в личном кабинете.
+              Полный календарь начислений будет доступен в личном кабинете после активации программы.
             </p>
           </Card>
         </div>
@@ -171,19 +178,19 @@ export function PlanDetailsPage() {
               )}
             </dl>
             <Button onClick={openPurchase} disabled={!plan.is_active}>
-              Купить подписку
+              Активировать программу
             </Button>
             <p className="small muted">
-              Условия копируются в купленную подписку и не меняются при
-              последующем редактировании плана.
+              Условия фиксируются при активации программы и не меняются при
+              последующем редактировании.
             </p>
           </Card>
         </aside>
       </div>
       <ConfirmDialog
         open={confirmOpen}
-        title={enough ? "Подтверждение покупки" : "Недостаточно средств"}
-        confirmLabel={enough ? "Купить подписку" : "Пополнить баланс"}
+        title={enough ? "Подтверждение активации" : "Недостаточно средств"}
+        confirmLabel={enough ? "Активировать программу" : "Пополнить баланс"}
         loading={purchasing}
         onClose={() => setConfirmOpen(false)}
         onConfirm={() =>
@@ -199,7 +206,7 @@ export function PlanDetailsPage() {
               Стоимость: <MoneyValue value={plan.price} />
             </p>
             <p>
-              Баланс после покупки:{" "}
+              Баланс после активации:{" "}
               <MoneyValue
                 value={subtractMoney(wallet.available_balance, plan.price)}
               />

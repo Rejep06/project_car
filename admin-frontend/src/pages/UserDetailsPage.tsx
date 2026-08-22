@@ -50,7 +50,7 @@ export function UserDetailsPage() {
       setUser(
         await adjustBalance(id, amount, description, crypto.randomUUID()),
       );
-      setMessage("Корректировка записана через WalletService");
+      setMessage("Корректировка баланса выполнена");
       setAmount("");
       setDescription("");
     } catch (err) {
@@ -93,6 +93,16 @@ export function UserDetailsPage() {
           <h2>Профиль</h2>
           <dl className="details">
             <div>
+              <dt>Email подтверждён</dt>
+              <dd><StatusBadge value={user.email_verified ? "confirmed" : "pending"} /></dd>
+            </div>
+            {user.pending_email ? (
+              <div>
+                <dt>Ожидает подтверждения</dt>
+                <dd>{user.pending_email}</dd>
+              </div>
+            ) : null}
+            <div>
               <dt>Роль</dt>
               <dd>
                 <StatusBadge value={user.role} />
@@ -105,6 +115,14 @@ export function UserDetailsPage() {
             <div>
               <dt>Заморожен</dt>
               <dd>{user.is_frozen ? "Да" : "Нет"}</dd>
+            </div>
+            <div>
+              <dt>Реферальный код</dt>
+              <dd className="mono">{user.referral_code}</dd>
+            </div>
+            <div>
+              <dt>Пригласивший пользователь</dt>
+              <dd className="mono">{user.referred_by_user_id ?? "—"}</dd>
             </div>
             <div>
               <dt>Создан</dt>
@@ -137,9 +155,8 @@ export function UserDetailsPage() {
       <Card>
         <h2>Административная корректировка</h2>
         <p className="muted">
-          Это не прямое присваивание баланса. Backend блокирует кошелёк, создаёт
-          WalletTransaction и AuditLog. Для списания укажите отрицательную
-          сумму.
+          Для пополнения укажите положительную сумму, для списания — отрицательную.
+          Обязательно укажите понятную причину корректировки.
         </p>
         <form className="inline-form" onSubmit={adjust}>
           <FormField label="Сумма, USDT">
@@ -166,10 +183,8 @@ export function UserDetailsPage() {
       <Card>
         <h2>Связанные данные</h2>
         <p className="muted">
-          Текущий backend не предоставляет административные subresource
-          endpoints для подписок, операций, пополнений, выводов и обращений
-          одного пользователя. Панель не создаёт несуществующие запросы;
-          переходите в соответствующие общие разделы.
+          Для просмотра пополнений, выводов, обращений и журнала действий
+          перейдите в соответствующий раздел панели.
         </p>
         <div className="link-row">
           <Link to="/deposits">Пополнения</Link>
@@ -185,7 +200,7 @@ export function UserDetailsPage() {
             ? "Разморозить пользователя"
             : "Заморозить пользователя"
         }
-        description="Backend повторно проверит роль администратора и текущее состояние пользователя."
+        description="Подтвердите изменение статуса пользователя."
         confirmLabel={user.is_frozen ? "Разморозить" : "Заморозить"}
         danger={!user.is_frozen}
         loading={busy}

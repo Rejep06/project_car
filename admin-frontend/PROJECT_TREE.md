@@ -1,79 +1,99 @@
-# Дерево проекта admin-frontend
+# Дерево admin frontend
 
 ```text
 admin-frontend/
+├── public/
+│   ├── assets/
+│   │   ├── favicon.png
+│   │   ├── hero-car-photo.jpg
+│   │   ├── logo.png
+│   │   └── program-car-photo.jpg
+│   ├── README.md
+│   └── robots.txt
+├── src/
+│   ├── api/
+│   │   ├── audit.ts
+│   │   ├── auth.ts
+│   │   ├── client.ts
+│   │   ├── deposits.ts
+│   │   ├── depositWallets.ts
+│   │   ├── plans.ts
+│   │   ├── posts.ts
+│   │   ├── support.ts
+│   │   ├── types.ts
+│   │   ├── users.ts
+│   │   └── withdrawals.ts
+│   ├── auth/
+│   │   ├── AdminRoute.tsx
+│   │   ├── AuthContext.tsx
+│   │   └── tokenStore.ts
+│   ├── components/
+│   │   ├── AdminLayout.tsx
+│   │   ├── Button.tsx
+│   │   ├── Card.tsx
+│   │   ├── ConfirmDialog.tsx
+│   │   ├── DataTable.tsx
+│   │   ├── EmptyState.tsx
+│   │   ├── FormField.tsx
+│   │   ├── LoadingSpinner.tsx
+│   │   ├── Modal.tsx
+│   │   ├── PageHeader.tsx
+│   │   ├── Pagination.tsx
+│   │   ├── StatusBadge.tsx
+│   │   └── Toast.tsx
+│   ├── config/
+│   │   └── assets.ts
+│   ├── pages/
+│   │   ├── AuditPage.tsx
+│   │   ├── DashboardPage.tsx
+│   │   ├── DepositDetailsPage.tsx
+│   │   ├── DepositsPage.tsx
+│   │   ├── DepositWalletsPage.tsx
+│   │   ├── LoginPage.tsx
+│   │   ├── NotFoundPage.tsx
+│   │   ├── PlanFormPage.tsx
+│   │   ├── PlansPage.tsx
+│   │   ├── PostFormPage.tsx
+│   │   ├── PostsPage.tsx
+│   │   ├── SupportDetailsPage.tsx
+│   │   ├── SupportPage.tsx
+│   │   ├── UserDetailsPage.tsx
+│   │   ├── UsersPage.tsx
+│   │   ├── WithdrawalDetailsPage.tsx
+│   │   └── WithdrawalsPage.tsx
+│   ├── styles/
+│   │   ├── admin.css
+│   │   ├── base.css
+│   │   └── responsive.css
+│   ├── test/
+│   │   ├── auth-persistence.test.tsx
+│   │   ├── auth-plans.test.tsx
+│   │   ├── fixtures.ts
+│   │   ├── helpers.tsx
+│   │   ├── operations.test.tsx
+│   │   └── setup.ts
+│   ├── utils/
+│   │   ├── date.ts
+│   │   ├── labels.ts
+│   │   └── money.ts
+│   ├── App.tsx
+│   ├── main.tsx
+│   └── vite-env.d.ts
 ├── .dockerignore
 ├── .env.example
 ├── .gitignore
 ├── BACKEND_API_MAP.md
 ├── Dockerfile
-├── README.md
-├── VALIDATION_REPORT.md
 ├── eslint.config.js
 ├── index.html
 ├── nginx.conf
 ├── package-lock.json
 ├── package.json
-├── public/README.md
-├── public/robots.txt
-├── src/App.tsx
-├── src/api/audit.ts
-├── src/api/auth.ts
-├── src/api/client.ts
-├── src/api/deposits.ts
-├── src/api/plans.ts
-├── src/api/posts.ts
-├── src/api/support.ts
-├── src/api/types.ts
-├── src/api/users.ts
-├── src/api/withdrawals.ts
-├── src/auth/AdminRoute.tsx
-├── src/auth/AuthContext.tsx
-├── src/auth/tokenStore.ts
-├── src/components/AdminLayout.tsx
-├── src/components/Button.tsx
-├── src/components/Card.tsx
-├── src/components/ConfirmDialog.tsx
-├── src/components/DataTable.tsx
-├── src/components/EmptyState.tsx
-├── src/components/FormField.tsx
-├── src/components/LoadingSpinner.tsx
-├── src/components/Modal.tsx
-├── src/components/PageHeader.tsx
-├── src/components/Pagination.tsx
-├── src/components/StatusBadge.tsx
-├── src/components/Toast.tsx
-├── src/main.tsx
-├── src/pages/AuditPage.tsx
-├── src/pages/DashboardPage.tsx
-├── src/pages/DepositDetailsPage.tsx
-├── src/pages/DepositsPage.tsx
-├── src/pages/LoginPage.tsx
-├── src/pages/NotFoundPage.tsx
-├── src/pages/PlanFormPage.tsx
-├── src/pages/PlansPage.tsx
-├── src/pages/PostFormPage.tsx
-├── src/pages/PostsPage.tsx
-├── src/pages/SupportDetailsPage.tsx
-├── src/pages/SupportPage.tsx
-├── src/pages/UserDetailsPage.tsx
-├── src/pages/UsersPage.tsx
-├── src/pages/WithdrawalDetailsPage.tsx
-├── src/pages/WithdrawalsPage.tsx
-├── src/styles/admin.css
-├── src/styles/base.css
-├── src/styles/responsive.css
-├── src/test/auth-plans.test.tsx
-├── src/test/fixtures.ts
-├── src/test/helpers.tsx
-├── src/test/operations.test.tsx
-├── src/test/setup.ts
-├── src/utils/date.ts
-├── src/utils/labels.ts
-├── src/utils/money.ts
-├── src/vite-env.d.ts
+├── PROJECT_TREE.md
+├── README.md
 ├── tsconfig.app.json
 ├── tsconfig.json
 ├── tsconfig.node.json
+├── VALIDATION_REPORT.md
 └── vite.config.ts
 ```

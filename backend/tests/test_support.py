@@ -7,7 +7,7 @@ from app.db.session import async_session_maker
 from app.utils.datetime import utcnow
 from app.utils.money import format_amount, parse_amount
 from app.workers.deposit_worker import run_deposit_cycle
-from tests.fakes import FakeBinanceClient, make_deposit
+from tests.fakes import FakeInfuraClient, make_deposit
 
 
 async def prepare_unmatched(client, user, admin_account, suffix: str):
@@ -20,18 +20,18 @@ async def prepare_unmatched(client, user, admin_account, suffix: str):
         )
     ).json()
     actual_atomic = parse_amount(invoice["expected_amount"]) + 7
-    txid = suffix * 64
+    txid = "0x" + suffix * 64
     deposit = make_deposit(
         external_id=f"problem-{suffix}",
         txid=txid,
-        address=settings.binance_deposit_address,
+        address=settings.default_deposit_address,
         amount_atomic=actual_atomic,
         detected_at=utcnow(),
     )
     await run_deposit_cycle(
-        client=FakeBinanceClient([deposit]),
         session_factory=async_session_maker,
         settings=settings,
+        client_factory=lambda _settings, _provider_network: FakeInfuraClient([deposit]),
     )
     unmatched = (
         await client.get(
@@ -51,12 +51,12 @@ async def test_user_creates_ticket_with_txid(client, make_account):
             "category": "deposit_problem",
             "subject": "Пополнение не зачислено",
             "message": "Транзакция успешна, но баланс не изменился",
-            "txid": "e" * 64,
+            "txid": "0x" + "e" * 64,
             "related_deposit_invoice_id": None,
         },
     )
     assert response.status_code == 201, response.text
-    assert response.json()["messages"][0]["txid"] == "e" * 64
+    assert response.json()["messages"][0]["txid"] == "0x" + "e" * 64
     assert response.json()["status"] == "open"
 
 
@@ -146,9 +146,10 @@ async def test_admin_resolves_problem_deposit_from_ticket(
     detail = admin_detail.json()
     assert detail["expected_amount"] == invoice["expected_amount"]
     assert detail["actual_amount"] == format_amount(actual_atomic)
-    assert detail["binance_txid"] == txid
-    assert detail["binance_network"] == "TRON"
-    assert detail["binance_raw_data"]["txId"] == txid
+    assert detail["deposit_txid"] == txid
+    assert detail["deposit_network"] == "ETHEREUM"
+    assert detail["deposit_status"] == "success"
+    assert detail["deposit_raw_data"]["transactionHash"] == txid
 
     response = await client.post(
         f"/api/v1/admin/support/tickets/{ticket['id']}/resolve-deposit",

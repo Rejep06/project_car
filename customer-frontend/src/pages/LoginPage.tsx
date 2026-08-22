@@ -10,30 +10,39 @@ export function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [emailNotVerified, setEmailNotVerified] = useState(false);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
   if (user) return <Navigate to="/account" replace />;
+
   async function submit(event: FormEvent) {
     event.preventDefault();
     setLoading(true);
     setError("");
+    setEmailNotVerified(false);
     try {
       await login(email, password);
       const from = (location.state as { from?: string } | null)?.from;
       navigate(from || "/account", { replace: true });
     } catch (e) {
-      setError(e instanceof ApiClientError ? e.message : "Не удалось войти");
+      if (e instanceof ApiClientError) {
+        setEmailNotVerified(e.code === "email_not_verified");
+        setError(e.message);
+      } else {
+        setError("Не удалось войти");
+      }
     } finally {
       setLoading(false);
     }
   }
+
   return (
     <section className="auth-page">
       <Card className="auth-card">
         <p className="eyebrow">Личный кабинет</p>
         <h1>Вход</h1>
-        <p>Используйте email и пароль, указанные при регистрации.</p>
+        <p>Используйте подтверждённый email и пароль.</p>
         <form onSubmit={submit} className="form-stack">
           <label>
             Email
@@ -55,9 +64,19 @@ export function LoginPage() {
               onChange={(e) => setPassword(e.target.value)}
             />
           </label>
+          <div className="form-row-link">
+            <Link to="/forgot-password">Забыли пароль?</Link>
+          </div>
           {error && (
             <div className="form-error" role="alert">
               {error}
+              {emailNotVerified && email && (
+                <div>
+                  <Link to={`/check-email?email=${encodeURIComponent(email)}`}>
+                    Отправить письмо повторно
+                  </Link>
+                </div>
+              )}
             </div>
           )}
           <Button type="submit" loading={loading}>

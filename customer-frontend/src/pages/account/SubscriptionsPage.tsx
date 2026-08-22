@@ -9,6 +9,7 @@ import { MoneyValue } from "../../components/MoneyValue";
 import { Pagination } from "../../components/Pagination";
 import { StatusBadge } from "../../components/StatusBadge";
 import { formatDateOnly } from "../../utils/date";
+import { planTierLabels } from "../../utils/programs";
 export function SubscriptionsPage() {
   const [items, setItems] = useState<UserSubscription[]>([]);
   const [page, setPage] = useState(1);
@@ -46,7 +47,12 @@ export function SubscriptionsPage() {
             {items.map((item) => (
               <Card key={item.id}>
                 <div className="card-heading">
-                  <h2>{item.plan_title}</h2>
+                  <div>
+                    <p className={`program-tier program-tier-${item.plan_tier}`}>
+                      {planTierLabels[item.plan_tier]}
+                    </p>
+                    <h2>{item.plan_title}</h2>
+                  </div>
                   <StatusBadge status={item.status} />
                 </div>
                 <dl className="compact-dl">

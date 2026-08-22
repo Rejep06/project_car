@@ -11,53 +11,42 @@ export function DepositStatusPanel({
   now?: Date;
 }) {
   const expires = new Date(invoice.expires_at);
-  const reserved = new Date(invoice.amount_reserved_until);
+  const validUntil = new Date(invoice.amount_reserved_until);
   const mainExpired = now > expires;
-  const reservationExpired = now > reserved;
+  const validityExpired = now > validUntil;
 
   if (invoice.status === "credited") {
     return (
       <div className="notice success">
         <h3>Платёж успешно зачислен</h3>
         <p>
-          Получено:{" "}
-          <MoneyValue
-            value={invoice.received_amount ?? invoice.expected_amount}
-          />
+          Получено: <MoneyValue value={invoice.received_amount ?? invoice.expected_amount} />
         </p>
-        {invoice.credited_after_expiration && (
-          <p>
-            Платёж поступил после основного срока заявки, но был автоматически
-            зачислен.
-          </p>
-        )}
       </div>
     );
   }
-  if (reservationExpired) {
+  if (validityExpired) {
     return (
       <div className="notice danger">
-        <h3>Период автоматического распознавания завершён</h3>
-        <p>Если деньги уже отправлены, создайте обращение и укажите TxID.</p>
+        <h3>Срок действия реквизитов завершён</h3>
+        <p>Не отправляйте перевод по этой заявке. Создайте новую заявку или обратитесь в поддержку, если платёж уже выполнен.</p>
       </div>
     );
   }
   if (mainExpired) {
     return (
       <div className="notice warning">
-        <h3>Ожидаем возможный поздний платёж</h3>
+        <h3>Основной срок заявки завершён</h3>
         <p>
-          Основной срок заявки истёк. Если точная сумма уже отправлена, система
-          продолжит проверку до {formatDate(invoice.amount_reserved_until)}.
+          Если перевод уже выполнен, дождитесь обновления статуса. Реквизиты действительны до {formatDate(invoice.amount_reserved_until)}.
         </p>
-        <p>Не отправляйте деньги после окончания 24 часов.</p>
       </div>
     );
   }
   return (
     <div className="notice info">
-      <h3>Основной срок оплаты</h3>
-      <p>Отправьте точную сумму до {formatDate(invoice.expires_at)}.</p>
+      <h3>Заявка ожидает оплату</h3>
+      <p>Переведите точную сумму до {formatDate(invoice.expires_at)}.</p>
       <StatusBadge status={invoice.status} />
     </div>
   );

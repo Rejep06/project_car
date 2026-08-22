@@ -23,4 +23,4 @@ class AuthSession(TimestampMixin, Base):
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True, nullable=False)
     revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
-    user = relationship("User", back_populates="auth_sessions", lazy="joined")
+    user = relationship("User", back_populates="auth_sessions", lazy="selectin")

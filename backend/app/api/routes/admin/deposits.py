@@ -1,4 +1,4 @@
-"""Ручной разбор нераспознанных Binance-депозитов."""
+"""Ручной разбор нераспознанных блокчейн-переводов."""
 
 from typing import Annotated
 from uuid import UUID

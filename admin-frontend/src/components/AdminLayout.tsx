@@ -6,22 +6,27 @@ import {
   Headphones,
   LogOut,
   Menu,
+  TicketCheck,
   Newspaper,
   Users,
   WalletCards,
+  Landmark,
   X,
 } from "lucide-react";
 import { useState } from "react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
+import { brandLogoUrl } from "../config/assets";
 const items = [
   ["/", "Обзор", Gauge],
-  ["/plans", "Подписки", CreditCard],
+  ["/plans", "Программы", CreditCard],
+  ["/lotteries", "Лотереи", TicketCheck],
   ["/users", "Пользователи", Users],
   ["/deposits", "Пополнения", WalletCards],
+  ["/deposit-wallets", "Адреса пополнения", Landmark],
   ["/withdrawals", "Выводы", ClipboardList],
   ["/support", "Поддержка", Headphones],
-  ["/posts", "Новости", Newspaper],
+  ["/posts", "Публикации", Newspaper],
   ["/audit", "Аудит", FileText],
 ] as const;
 export function AdminLayout() {
@@ -51,7 +56,7 @@ export function AdminLayout() {
       )}
       <aside className={`sidebar ${open ? "sidebar-open" : ""}`}>
         <div className="sidebar-brand">
-          <span className="brand-mark">AC</span>
+          <img className="brand-logo" src={brandLogoUrl} alt="" width="42" height="42" />
           <div>
             <strong>
               {import.meta.env.VITE_ADMIN_APP_NAME || "Панель управления"}

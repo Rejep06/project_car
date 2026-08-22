@@ -62,6 +62,10 @@ export function DepositDetailsPage() {
           <h2>Реквизиты перевода</h2>
           <dl className="detail-list">
             <div>
+              <dt>Кошелёк</dt>
+              <dd>{invoice.wallet_name}</dd>
+            </div>
+            <div>
               <dt>Монета</dt>
               <dd>{invoice.asset}</dd>
             </div>
@@ -94,7 +98,7 @@ export function DepositDetailsPage() {
               <dd>{formatDate(invoice.expires_at)}</dd>
             </div>
             <div>
-              <dt>Автоматическая проверка до</dt>
+              <dt>Реквизиты действительны до</dt>
               <dd>{formatDate(invoice.amount_reserved_until)}</dd>
             </div>
           </dl>
@@ -109,11 +113,10 @@ export function DepositDetailsPage() {
       </div>
       <div className="notice warning">
         <strong>
-          Отправьте ровно указанную сумму через сеть TRON (TRC20).
+          Отправьте ровно указанную сумму через сеть {invoice.network}.
         </strong>
         <p>
-          Проверьте, сколько получит адрес после комиссии биржи. Не отправляйте
-          USDT через другую сеть.
+          Проверьте адрес, сеть и точную сумму перед подтверждением. Не отправляйте {invoice.asset} через другую сеть.
         </p>
       </div>
       <div className="page-actions">

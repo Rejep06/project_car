@@ -18,6 +18,7 @@ from app.db.enums import UserRole
 from app.db.models import User
 from app.db.session import async_session_maker
 from app.services.wallet_service import WalletService
+from app.utils.datetime import utcnow
 
 
 def parse_args() -> argparse.Namespace:
@@ -38,6 +39,7 @@ async def create_admin(email: str, password: str) -> None:
             role=UserRole.ADMIN,
             is_active=True,
             is_frozen=False,
+            email_verified_at=utcnow(),
         )
         session.add(user)
         await session.flush()

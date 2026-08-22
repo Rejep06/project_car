@@ -30,6 +30,25 @@ async def test_draft_post_is_not_public(client, admin_account):
     assert listing.json()["total"] == 0
 
 
+@pytest.mark.asyncio
+async def test_post_slug_is_generated_automatically(client, admin_account):
+    created = await client.post(
+        "/api/v1/admin/posts",
+        headers=admin_account["headers"],
+        json={
+            "title": "Новости компании",
+            "excerpt": "Короткое описание",
+            "content": "Текст публикации",
+            "cover_image_url": None,
+        },
+    )
+    assert created.status_code == 201, created.text
+    slug = created.json()["slug"]
+    assert slug.startswith("novosti-kompanii-")
+    assert len(slug.rsplit("-", 1)[-1]) == 8
+
+
+
 def test_money_values_do_not_use_float():
     assert parse_amount("100.347000") == 100_347_000
     assert format_amount(100_347_000) == "100.347000"

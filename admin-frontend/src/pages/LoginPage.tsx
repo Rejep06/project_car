@@ -1,8 +1,8 @@
-import { ShieldCheck } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import { ApiClientError } from "../api/client";
 import { useAuth } from "../auth/AuthContext";
+import { brandLogoUrl } from "../config/assets";
 import { Button } from "../components/Button";
 import { FormField } from "../components/FormField";
 export function LoginPage() {
@@ -37,9 +37,13 @@ export function LoginPage() {
   return (
     <main className="login-page">
       <section className="login-card">
-        <div className="login-icon">
-          <ShieldCheck />
-        </div>
+        <img
+          className="login-logo"
+          src={brandLogoUrl}
+          alt="Логотип Automotive Club"
+          width="64"
+          height="64"
+        />
         <h1>Вход администратора</h1>
         <p>Доступ разрешён только учётным записям с ролью admin.</p>
         <form onSubmit={submit}>

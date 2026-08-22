@@ -1,92 +1,116 @@
-# Дерево проекта customer-frontend
+# Дерево customer frontend
 
 ```text
 customer-frontend/
+├── public/
+│   ├── assets/
+│   │   ├── favicon.png
+│   │   ├── hero-car-photo.jpg
+│   │   ├── logo.png
+│   │   └── program-car-photo.jpg
+│   ├── README.md
+│   └── robots.txt
+├── src/
+│   ├── api/
+│   │   ├── auth.ts
+│   │   ├── client.ts
+│   │   ├── plans.ts
+│   │   ├── posts.ts
+│   │   ├── referrals.ts
+│   │   ├── subscriptions.ts
+│   │   ├── support.ts
+│   │   ├── system.ts
+│   │   ├── types.ts
+│   │   ├── users.ts
+│   │   └── wallet.ts
+│   ├── auth/
+│   │   ├── AuthContext.tsx
+│   │   ├── ProtectedRoute.tsx
+│   │   └── tokenStore.ts
+│   ├── components/
+│   │   ├── AccountLayout.tsx
+│   │   ├── Button.tsx
+│   │   ├── Card.tsx
+│   │   ├── ConfirmDialog.tsx
+│   │   ├── CopyButton.tsx
+│   │   ├── DepositStatusPanel.tsx
+│   │   ├── EmptyState.tsx
+│   │   ├── LoadingSpinner.tsx
+│   │   ├── Modal.tsx
+│   │   ├── MoneyValue.tsx
+│   │   ├── Pagination.tsx
+│   │   ├── PlanCard.tsx
+│   │   ├── ProgramImage.tsx
+│   │   ├── PublicLayout.tsx
+│   │   ├── StatusBadge.tsx
+│   │   └── Toast.tsx
+│   ├── config/
+│   │   ├── assets.ts
+│   │   └── content.ts
+│   ├── pages/
+│   │   ├── account/
+│   │   │   ├── AccountDashboardPage.tsx
+│   │   │   ├── DepositDetailsPage.tsx
+│   │   │   ├── DepositsPage.tsx
+│   │   │   ├── ProfilePage.tsx
+│   │   │   ├── ReferralsPage.tsx
+│   │   │   ├── RewardsPage.tsx
+│   │   │   ├── SubscriptionDetailsPage.tsx
+│   │   │   ├── SubscriptionsPage.tsx
+│   │   │   ├── SupportDetailsPage.tsx
+│   │   │   ├── SupportPage.tsx
+│   │   │   ├── TransactionsPage.tsx
+│   │   │   ├── WalletPage.tsx
+│   │   │   └── WithdrawalsPage.tsx
+│   │   ├── AboutPage.tsx
+│   │   ├── FaqPage.tsx
+│   │   ├── HomePage.tsx
+│   │   ├── HowItWorksPage.tsx
+│   │   ├── LoginPage.tsx
+│   │   ├── NewsDetailsPage.tsx
+│   │   ├── NewsPage.tsx
+│   │   ├── NotFoundPage.tsx
+│   │   ├── PlanDetailsPage.tsx
+│   │   ├── PlansPage.tsx
+│   │   ├── PrivacyPage.tsx
+│   │   ├── RegisterPage.tsx
+│   │   └── TermsPage.tsx
+│   ├── styles/
+│   │   ├── base.css
+│   │   ├── components.css
+│   │   ├── pages.css
+│   │   └── responsive.css
+│   ├── test/
+│   │   ├── auth-persistence.test.tsx
+│   │   ├── customer.test.tsx
+│   │   ├── deposits-support-withdrawals.test.tsx
+│   │   ├── fixtures.ts
+│   │   ├── registration-consents.test.tsx
+│   │   ├── render.tsx
+│   │   └── setup.ts
+│   ├── utils/
+│   │   ├── date.ts
+│   │   ├── money.ts
+│   │   ├── programs.ts
+│   │   └── rewards.ts
+│   ├── App.tsx
+│   ├── main.tsx
+│   └── vite-env.d.ts
 ├── .dockerignore
 ├── .env.example
 ├── .gitignore
 ├── BACKEND_API_MAP.md
 ├── Dockerfile
-├── README.md
-├── VALIDATION_REPORT.md
 ├── eslint.config.js
 ├── index.html
 ├── nginx.conf
 ├── package-lock.json
 ├── package.json
-├── public/README.md
-├── public/robots.txt
-├── src/App.tsx
-├── src/api/auth.ts
-├── src/api/client.ts
-├── src/api/plans.ts
-├── src/api/posts.ts
-├── src/api/subscriptions.ts
-├── src/api/support.ts
-├── src/api/system.ts
-├── src/api/types.ts
-├── src/api/users.ts
-├── src/api/wallet.ts
-├── src/auth/AuthContext.tsx
-├── src/auth/ProtectedRoute.tsx
-├── src/auth/tokenStore.ts
-├── src/components/AccountLayout.tsx
-├── src/components/Button.tsx
-├── src/components/Card.tsx
-├── src/components/ConfirmDialog.tsx
-├── src/components/CopyButton.tsx
-├── src/components/DepositStatusPanel.tsx
-├── src/components/EmptyState.tsx
-├── src/components/LoadingSpinner.tsx
-├── src/components/Modal.tsx
-├── src/components/MoneyValue.tsx
-├── src/components/Pagination.tsx
-├── src/components/PlanCard.tsx
-├── src/components/PublicLayout.tsx
-├── src/components/StatusBadge.tsx
-├── src/components/Toast.tsx
-├── src/config/content.ts
-├── src/main.tsx
-├── src/pages/AboutPage.tsx
-├── src/pages/FaqPage.tsx
-├── src/pages/HomePage.tsx
-├── src/pages/HowItWorksPage.tsx
-├── src/pages/LoginPage.tsx
-├── src/pages/NewsDetailsPage.tsx
-├── src/pages/NewsPage.tsx
-├── src/pages/NotFoundPage.tsx
-├── src/pages/PlanDetailsPage.tsx
-├── src/pages/PlansPage.tsx
-├── src/pages/PrivacyPage.tsx
-├── src/pages/RegisterPage.tsx
-├── src/pages/TermsPage.tsx
-├── src/pages/account/AccountDashboardPage.tsx
-├── src/pages/account/DepositDetailsPage.tsx
-├── src/pages/account/DepositsPage.tsx
-├── src/pages/account/ProfilePage.tsx
-├── src/pages/account/RewardsPage.tsx
-├── src/pages/account/SubscriptionDetailsPage.tsx
-├── src/pages/account/SubscriptionsPage.tsx
-├── src/pages/account/SupportDetailsPage.tsx
-├── src/pages/account/SupportPage.tsx
-├── src/pages/account/TransactionsPage.tsx
-├── src/pages/account/WalletPage.tsx
-├── src/pages/account/WithdrawalsPage.tsx
-├── src/styles/base.css
-├── src/styles/components.css
-├── src/styles/pages.css
-├── src/styles/responsive.css
-├── src/test/customer.test.tsx
-├── src/test/deposits-support-withdrawals.test.tsx
-├── src/test/fixtures.ts
-├── src/test/render.tsx
-├── src/test/setup.ts
-├── src/utils/date.ts
-├── src/utils/money.ts
-├── src/utils/rewards.ts
-├── src/vite-env.d.ts
+├── PROJECT_TREE.md
+├── README.md
 ├── tsconfig.app.json
 ├── tsconfig.json
 ├── tsconfig.node.json
+├── VALIDATION_REPORT.md
 └── vite.config.ts
 ```

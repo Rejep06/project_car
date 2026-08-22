@@ -5,7 +5,10 @@ import { AuditPage } from "./pages/AuditPage";
 import { DashboardPage } from "./pages/DashboardPage";
 import { DepositDetailsPage } from "./pages/DepositDetailsPage";
 import { DepositsPage } from "./pages/DepositsPage";
+import { DepositWalletsPage } from "./pages/DepositWalletsPage";
 import { LoginPage } from "./pages/LoginPage";
+import { LotteryFormPage } from "./pages/LotteryFormPage";
+import { LotteriesPage } from "./pages/LotteriesPage";
 import { NotFoundPage } from "./pages/NotFoundPage";
 import { PlanFormPage } from "./pages/PlanFormPage";
 import { PlansPage } from "./pages/PlansPage";
@@ -27,10 +30,14 @@ export function App() {
           <Route path="/plans" element={<PlansPage />} />
           <Route path="/plans/new" element={<PlanFormPage />} />
           <Route path="/plans/:id" element={<PlanFormPage />} />
+          <Route path="/lotteries" element={<LotteriesPage />} />
+          <Route path="/lotteries/new" element={<LotteryFormPage />} />
+          <Route path="/lotteries/:id" element={<LotteryFormPage />} />
           <Route path="/users" element={<UsersPage />} />
           <Route path="/users/:id" element={<UserDetailsPage />} />
           <Route path="/deposits" element={<DepositsPage />} />
           <Route path="/deposits/:id" element={<DepositDetailsPage />} />
+          <Route path="/deposit-wallets" element={<DepositWalletsPage />} />
           <Route path="/withdrawals" element={<WithdrawalsPage />} />
           <Route path="/withdrawals/:id" element={<WithdrawalDetailsPage />} />
           <Route path="/support" element={<SupportPage />} />

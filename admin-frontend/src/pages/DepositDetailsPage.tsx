@@ -74,16 +74,16 @@ export function DepositDetailsPage() {
               <dd className="mono break-all">{item.txid}</dd>
             </div>
             <div>
-              <dt>Binance deposit ID</dt>
-              <dd className="mono break-all">{item.binance_deposit_id}</dd>
+              <dt>ID события</dt>
+              <dd className="mono break-all">{item.event_id}</dd>
             </div>
             <div>
-              <dt>Монета</dt>
-              <dd>{item.coin}</dd>
+              <dt>Актив</dt>
+              <dd>{item.asset}</dd>
             </div>
             <div>
               <dt>Фактическая сумма</dt>
-              <dd>{formatMoney(item.amount)} USDT</dd>
+              <dd>{formatMoney(item.amount)} {item.asset}</dd>
             </div>
             <div>
               <dt>Адрес проекта</dt>
@@ -94,8 +94,20 @@ export function DepositDetailsPage() {
               <dd>{item.network}</dd>
             </div>
             <div>
-              <dt>Статус Binance</dt>
-              <dd>{item.binance_status}</dd>
+              <dt>Провайдер</dt>
+              <dd>{item.provider}</dd>
+            </div>
+            <div>
+              <dt>Блок / logIndex</dt>
+              <dd>{item.block_number ?? "—"} / {item.log_index}</dd>
+            </div>
+            <div>
+              <dt>Подтверждения</dt>
+              <dd>{item.confirmations}</dd>
+            </div>
+            <div>
+              <dt>Статус события</dt>
+              <dd>{item.deposit_status}</dd>
             </div>
             <div>
               <dt>Время депозита</dt>
@@ -139,10 +151,7 @@ export function DepositDetailsPage() {
         <Card>
           <h2>Ручное зачисление</h2>
           <p className="muted">
-            Endpoint повторно проверяет USDT, TRON, адрес, успешный
-            Binance-статус, уникальность Binance deposit ID и TxID. Баланс
-            изменяется через WalletService с idempotency key{" "}
-            <code>manual-deposit:{item.binance_deposit_id}</code>.
+            Перед зачислением проверьте валюту, сеть, адрес, сумму и TxID платежа.
           </p>
           <form
             className="inline-form"
@@ -179,7 +188,7 @@ export function DepositDetailsPage() {
       <ConfirmDialog
         open={confirm}
         title="Подтвердить ручное зачисление"
-        description={`Пользователь: ${userId}. Фактическая сумма: ${formatMoney(item.amount)} USDT. TxID: ${item.txid}.`}
+        description={`Пользователь: ${userId}. Фактическая сумма: ${formatMoney(item.amount)} {item.asset}. TxID: ${item.txid}.`}
         confirmLabel="Зачислить"
         loading={busy}
         onConfirm={performAssign}

@@ -1,4 +1,4 @@
-"""Заявки на ручной вывод USDT TRC20."""
+"""Заявки на ручной вывод USDT ERC-20."""
 
 from __future__ import annotations
 
@@ -21,7 +21,7 @@ class WithdrawalRequest(TimestampMixin, Base):
         Uuid(as_uuid=True), ForeignKey("users.id", ondelete="RESTRICT"), index=True, nullable=False
     )
     asset: Mapped[str] = mapped_column(String(16), default="USDT", nullable=False)
-    network: Mapped[str] = mapped_column(String(32), default="TRON", nullable=False)
+    network: Mapped[str] = mapped_column(String(32), default="ETHEREUM", nullable=False)
     destination_address: Mapped[str] = mapped_column(String(256), nullable=False)
     amount_atomic: Mapped[int] = mapped_column(BigInteger, nullable=False)
     fee_atomic: Mapped[int] = mapped_column(BigInteger, nullable=False)

@@ -1,4 +1,4 @@
-"""Тарифы и купленные пользовательские подписки."""
+"""Клиентские программы и активированные пользователями программы."""
 
 from __future__ import annotations
 
@@ -12,7 +12,7 @@ from sqlalchemy.types import Uuid
 from app.db.base import Base, TimestampMixin
 from app.db.enums import (
     DurationUnit,
-    PlanCategory,
+    PlanTier,
     RewardFrequency,
     UserSubscriptionStatus,
 )
@@ -32,8 +32,9 @@ class SubscriptionPlan(TimestampMixin, Base):
 
     id: Mapped[UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid4)
     title: Mapped[str] = mapped_column(String(200), nullable=False)
-    slug: Mapped[str] = mapped_column(String(200), unique=True, index=True, nullable=False)
-    category: Mapped[PlanCategory] = mapped_column(enum_column(PlanCategory, "plan_category"), nullable=False)
+    tier: Mapped[PlanTier] = mapped_column(
+        enum_column(PlanTier, "plan_tier"), index=True, nullable=False
+    )
     short_description: Mapped[str] = mapped_column(String(500), default="", nullable=False)
     full_description: Mapped[str] = mapped_column(Text, default="", nullable=False)
     image_url: Mapped[str | None] = mapped_column(String(1000), nullable=True)
@@ -64,6 +65,9 @@ class UserSubscription(TimestampMixin, Base):
     )
     plan_id: Mapped[UUID] = mapped_column(
         Uuid(as_uuid=True), ForeignKey("subscription_plans.id", ondelete="RESTRICT"), index=True, nullable=False
+    )
+    plan_tier: Mapped[PlanTier] = mapped_column(
+        enum_column(PlanTier, "purchased_plan_tier"), nullable=False
     )
     status: Mapped[UserSubscriptionStatus] = mapped_column(
         enum_column(UserSubscriptionStatus, "user_subscription_status"),

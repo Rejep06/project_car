@@ -9,7 +9,6 @@ import { LoadingSpinner } from "../components/LoadingSpinner";
 import { PageHeader } from "../components/PageHeader";
 const initial: PostInput = {
   title: "",
-  slug: "",
   excerpt: "",
   content: "",
   cover_image_url: null,
@@ -27,7 +26,6 @@ export function PostFormPage() {
       .then((p) =>
         setForm({
           title: p.title,
-          slug: p.slug,
           excerpt: p.excerpt,
           content: p.content,
           cover_image_url: p.cover_image_url,
@@ -56,8 +54,8 @@ export function PostFormPage() {
   return (
     <>
       <PageHeader
-        title={id ? "Изменение новости" : "Новая новость"}
-        description="Обычный textarea без тяжёлого визуального редактора."
+        title={id ? "Изменение публикации" : "Новая публикация"}
+        description="Подготовьте новость, материал о компании или обновление клиентских программ."
         actions={
           <Link className="button button-secondary" to="/posts">
             Назад
@@ -71,14 +69,6 @@ export function PostFormPage() {
               <input
                 value={form.title}
                 onChange={(e) => set("title", e.target.value)}
-                required
-              />
-            </FormField>
-            <FormField label="Slug">
-              <input
-                value={form.slug}
-                onChange={(e) => set("slug", e.target.value)}
-                pattern="[a-z0-9]+(?:-[a-z0-9]+)*"
                 required
               />
             </FormField>
@@ -97,7 +87,7 @@ export function PostFormPage() {
               onChange={(e) => set("excerpt", e.target.value)}
             />
           </FormField>
-          <FormField label="Содержимое (Markdown хранится как текст)">
+          <FormField label="Текст публикации">
             <textarea
               rows={16}
               value={form.content}
@@ -116,10 +106,10 @@ export function PostFormPage() {
               <img src={form.cover_image_url} alt="Обложка" />
             )}
             <small>Предварительный просмотр</small>
-            <h2>{form.title || "Заголовок новости"}</h2>
+            <h2>{form.title || "Заголовок публикации"}</h2>
             <p>{form.excerpt || "Краткое описание"}</p>
             <div className="preview-content">
-              {form.content || "Текст новости"}
+              {form.content || "Текст публикации"}
             </div>
           </Card>
         </aside>

@@ -88,7 +88,7 @@ export function WithdrawalDetailsPage() {
               <dd>{item.user_email}</dd>
             </div>
             <div>
-              <dt>Адрес TRON</dt>
+              <dt>Адрес Ethereum</dt>
               <dd className="mono break-all">{item.destination_address}</dd>
             </div>
             <div>
@@ -154,8 +154,7 @@ export function WithdrawalDetailsPage() {
           <Card>
             <h2>Подтвердить</h2>
             <p>
-              После подтверждения администратор вручную отправляет USDT через
-              интерфейс Binance.
+              Проверьте сумму, адрес и доступность реквизитов перед подтверждением.
             </p>
             <Button onClick={() => setConfirm("approve")}>
               Подтвердить заявку
@@ -218,8 +217,8 @@ export function WithdrawalDetailsPage() {
         <Card>
           <h2>Завершение</h2>
           <p>
-            Убедитесь, что транзакция подтверждена. Завершение уменьшит locked
-            balance; повторное завершение backend запретит.
+            Убедитесь, что транзакция подтверждена. После завершения
+            заблокированная сумма будет окончательно списана.
           </p>
           <FormField label="Комментарий">
             <textarea
@@ -246,7 +245,7 @@ export function WithdrawalDetailsPage() {
       <ConfirmDialog
         open={confirm === "complete"}
         title="Завершить вывод"
-        description={`TxID: ${item.txid ?? "не указан"}. Backend не позволит завершить вывод без TxID.`}
+        description={`TxID: ${item.txid ?? "не указан"}. Проверьте перевод перед завершением заявки.`}
         onConfirm={() =>
           action(() => completeWithdrawal(id, comment), "Вывод завершён")
         }

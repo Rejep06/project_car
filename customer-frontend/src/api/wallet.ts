@@ -1,6 +1,7 @@
 import { apiRequest } from "./client";
 import type {
   DepositInvoice,
+  DepositWallet,
   Pagination,
   Wallet,
   WalletTransaction,
@@ -12,10 +13,15 @@ export const listTransactions = (page = 1, pageSize = 20) =>
   apiRequest<Pagination<WalletTransaction>>(
     `/wallet/transactions?page=${page}&page_size=${pageSize}`,
   );
-export const createDeposit = (amount: string) =>
+export const listDepositWallets = () =>
+  apiRequest<DepositWallet[]>("/wallet/deposit-addresses");
+export const createDeposit = (amount: string, depositWalletId?: string) =>
   apiRequest<DepositInvoice>("/wallet/deposits", {
     method: "POST",
-    body: JSON.stringify({ amount }),
+    body: JSON.stringify({
+      amount,
+      deposit_wallet_id: depositWalletId || undefined,
+    }),
   });
 export const listDeposits = (page = 1, pageSize = 20) =>
   apiRequest<Pagination<DepositInvoice>>(

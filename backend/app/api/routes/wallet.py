@@ -9,9 +9,11 @@ from app.api.dependencies import CurrentUserDep, SessionDep
 from app.core.config import get_settings
 from app.schemas.common import PaginationResponse
 from app.schemas.deposit import DepositInvoiceCreate, DepositInvoiceRead
+from app.schemas.deposit_wallet import DepositWalletPublicRead
 from app.schemas.wallet import WalletRead, WalletTransactionRead
 from app.schemas.withdrawal import WithdrawalCreate, WithdrawalRead
 from app.services.deposit_service import DepositService
+from app.services.deposit_wallet_service import DepositWalletService
 from app.services.wallet_service import WalletService
 from app.services.withdrawal_service import WithdrawalService
 from app.utils.pagination import PaginationParams, get_pagination
@@ -46,6 +48,16 @@ async def list_wallet_transactions(
     )
 
 
+
+
+@router.get("/deposit-addresses", response_model=list[DepositWalletPublicRead])
+async def list_deposit_addresses(
+    session: SessionDep, _: CurrentUserDep
+) -> list[DepositWalletPublicRead]:
+    items = await DepositWalletService.list_active(session, get_settings())
+    return [DepositWalletPublicRead.model_validate(item) for item in items]
+
+
 @router.post(
     "/deposits",
     response_model=DepositInvoiceRead,
@@ -58,7 +70,11 @@ async def create_deposit_invoice(
 ) -> DepositInvoiceRead:
     settings = get_settings()
     invoice = await DepositService.create_invoice(
-        session, user=current_user, amount=data.amount, settings=settings
+        session,
+        user=current_user,
+        amount=data.amount,
+        deposit_wallet_id=data.deposit_wallet_id,
+        settings=settings,
     )
     return DepositInvoiceRead.from_invoice(invoice, settings.network_display_name)
 

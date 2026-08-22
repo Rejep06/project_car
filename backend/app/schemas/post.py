@@ -11,7 +11,11 @@ from app.schemas.common import APIModel
 
 class PostCreate(APIModel):
     title: str = Field(min_length=1, max_length=250)
-    slug: str = Field(pattern=r"^[a-z0-9]+(?:-[a-z0-9]+)*$", max_length=250)
+    slug: str | None = Field(
+        default=None,
+        pattern=r"^[a-z0-9]+(?:-[a-z0-9]+)*$",
+        max_length=250,
+    )
     excerpt: str = Field(default="", max_length=1000)
     content: str = Field(min_length=1)
     cover_image_url: str | None = Field(default=None, max_length=1000)

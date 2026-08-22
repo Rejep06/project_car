@@ -1,784 +1,174 @@
-# Subscription Platform Backend
+# Automotive Platform Backend
 
-Учебный backend-проект на FastAPI для сайта с подписками на игры и приложения. Проект включает регистрацию и JWT-авторизацию, внутренний USDT-баланс, покупку подписок, фиксированные периодические вознаграждения, автоматическое распознавание пополнений Binance USDT TRC20, обращения в поддержку, ручной вывод и административное API.
+FastAPI backend Automotive Club: аккаунты, подтверждение email, внутренний USDT-баланс, клиентские программы, вознаграждения, Ethereum/Infura-пополнения, выводы, рефералы, публикации, поддержка, уведомления и лотереи.
 
-Frontend в проект не входит. REST API документируется через Swagger/OpenAPI.
+## Технологии
 
-## Содержание
+- FastAPI;
+- SQLAlchemy 2 async;
+- PostgreSQL;
+- Alembic;
+- JWT access/refresh sessions;
+- SMTP outbox worker;
+- Ethereum JSON-RPC через Infura;
+- фоновые workers;
+- pytest.
 
-1. [Архитектура](#архитектура)
-2. [Как устроены деньги](#как-устроены-деньги)
-3. [Подписки и reward payout](#подписки-и-reward-payout)
-4. [Автоматическое пополнение](#автоматическое-пополнение)
-5. [Проблемные пополнения и поддержка](#проблемные-пополнения-и-поддержка)
-6. [Ручной вывод](#ручной-вывод)
-7. [Binance API-ключ только для чтения](#binance-api-ключ-только-для-чтения)
-8. [Запуск через Docker Compose](#запуск-через-docker-compose)
-9. [Миграции и служебные скрипты](#миграции-и-служебные-скрипты)
-10. [Тесты](#тесты)
-11. [Swagger](#swagger)
-12. [Вложения и переход на S3](#вложения-и-переход-на-s3)
-13. [Безопасность production](#безопасность-production)
-14. [Известные ограничения](#известные-ограничения)
+## Авторизация и email
 
-Полное дерево файлов находится в [`PROJECT_TREE.md`](PROJECT_TREE.md).
-
-## Архитектура
-
-Основной путь запроса:
-
-```text
-router → service → SQLAlchemy 2 async → PostgreSQL
-```
-
-Путь автоматического пополнения:
-
-```text
-deposit worker → BinanceReadOnlyClient → Binance API
-                         ↓
-                 DepositService
-                         ↓
-                   WalletService
-```
-
-Проект намеренно не использует микросервисы, Celery, Redis, CQRS, event bus, generic repository, GraphQL и Kubernetes. Бизнес-логика находится в понятных сервисах, а router отвечает только за HTTP-ввод, зависимости и сериализацию ответа.
-
-Основные каталоги:
-
-```text
-app/api/                    REST endpoints и зависимости
-app/services/               бизнес-логика и транзакции
-app/db/models/              SQLAlchemy-модели
-app/schemas/                Pydantic 2-схемы
-app/integrations/binance/   изолированная Binance-интеграция
-app/workers/                deposit worker и reward worker
-app/utils/                  деньги, даты, файлы, пагинация
-alembic/                    миграции
-scripts/                    создание администратора и demo data
-tests/                      интеграционные и модульные тесты
-```
-
-## Как устроены деньги
-
-Проект работает только с:
-
-```text
-Актив: USDT
-Сеть: TRON
-Стандарт: TRC20
-1 USDT = 1 000 000 atomic units
-```
-
-В API суммы передаются строками:
-
-```json
-{
-  "amount": "100.347000",
-  "asset": "USDT"
-}
-```
-
-В PostgreSQL и бизнес-логике суммы хранятся только как целые числа:
-
-```text
-100.347000 USDT → 100347000 atomic units
-```
-
-Преобразование выполняет `app/utils/money.py`:
-
-```python
-parse_amount("100.347000")  # 100347000
-format_amount(100347000)    # "100.347000"
-```
-
-`float` для денег не используется. `Decimal` применяется только при разборе входной строки.
-
-### Внутренний баланс
-
-`Wallet.available_balance_atomic` — средства, которые пользователь может потратить или запросить к выводу.
-
-`Wallet.locked_balance_atomic` — средства, временно заблокированные в заявке на вывод.
-
-Физические USDT не находятся в PostgreSQL. Они находятся на отдельном Binance-аккаунте проекта. Внутренний баланс — учётная запись обязательства backend перед пользователем.
-
-Любое изменение баланса проходит только через `WalletService`:
-
-1. строка кошелька блокируется через `SELECT FOR UPDATE`;
-2. проверяется, что новый баланс не станет отрицательным;
-3. меняются `available` и/или `locked`;
-4. создаётся неизменяемая запись `WalletTransaction`;
-5. всё фиксируется одной транзакцией БД.
-
-`WalletTransaction.idempotency_key` уникален. Повторная обработка одной операции не меняет баланс повторно.
-
-## Авторизация
-
-Поддерживаются роли:
-
-```text
-user
-admin
-```
-
-Используются:
-
-- Argon2 через `pwdlib` для паролей;
-- короткоживущий JWT access token;
-- JWT refresh token;
-- SHA-256-хеш refresh token в таблице `auth_sessions`;
-- ротация refresh token;
-- logout с отзывом серверной сессии.
-
-Основные endpoints:
+Регистрация требует пять юридических согласий и создаёт неподтверждённый аккаунт. JWT выдаётся только после подтверждения email.
 
 ```text
 POST /api/v1/auth/register
+POST /api/v1/auth/email-verification/confirm
+POST /api/v1/auth/email-verification/resend
+POST /api/v1/auth/password-reset/request
+POST /api/v1/auth/password-reset/confirm
 POST /api/v1/auth/login
 POST /api/v1/auth/refresh
 POST /api/v1/auth/logout
-GET  /api/v1/users/me
-PATCH /api/v1/users/me
 ```
 
-Проверки владельца выполняются в каждом пользовательском сервисе. Пользователь не может получить чужую заявку, подписку, вывод, обращение или вложение.
+Одноразовые токены генерируются криптографически стойко. В БД сохраняется только SHA-256-хеш. После смены пароля или подтверждения нового email все старые refresh-сессии отзываются.
 
-## Подписки и reward payout
+Письма сначала фиксируются в `email_outbox`, затем отправляются `email-worker`. Подробности: `../EMAIL_SETUP.md`.
 
-Администратор создаёт и деактивирует тарифы. Купленный тариф не удаляется, а его финансовые условия копируются в `UserSubscription`.
+## Юридические согласия
 
-Поэтому последующее изменение цены или reward-настроек тарифа не изменяет уже купленную подписку.
+`legal_consents` сохраняет:
 
-Покупка выполняется атомарно:
+- пользователя;
+- тип документа;
+- версию;
+- время;
+- IP;
+- User-Agent.
 
-1. блокируется кошелёк;
-2. проверяется `Idempotency-Key`;
-3. проверяется доступный баланс;
-4. цена списывается через `WalletService`;
-5. создаётся `UserSubscription`;
-6. копируются цена и параметры reward;
-7. заранее создаётся полный график `RewardPayout`;
-8. транзакция фиксируется.
-
-Endpoint покупки:
+Типы документов:
 
 ```text
-POST /api/v1/subscriptions/{plan_id}/purchase
-Idempotency-Key: уникальный-ключ-клиента
+terms_of_use
+privacy_policy
+personal_data_processing
+program_rules
+age_confirmation
 ```
 
-Вознаграждение — фиксированная сумма. Для месячной частоты используется `dateutil.relativedelta`, поэтому календарный месяц не заменяется 30 днями.
+## Лотереи
 
-### Reward worker
-
-`app/workers/reward_worker.py` запускается отдельным процессом. По умолчанию он работает каждые 30 секунд:
-
-1. выбирает просроченные `pending`/`failed` выплаты;
-2. использует `FOR UPDATE SKIP LOCKED`;
-3. переводит запись в `processing`;
-4. начисляет средства через `WalletService`;
-5. использует ключ `reward:{reward_payout_id}`;
-6. переводит выплату в `paid`;
-7. при ошибке увеличивает `attempt_count` и сохраняет безопасное описание ошибки.
-
-Повторный запуск не дублирует начисление.
-
-## Автоматическое пополнение
-
-### Почему используется один адрес
-
-MVP использует один Binance-аккаунт проекта и один адрес пополнения USDT TRC20. Пользователь не получает отдельный blockchain-адрес.
-
-Чтобы определить владельца перевода, backend добавляет к желаемой сумме уникальный трёхзначный идентификатор:
+Основные сущности:
 
 ```text
-Пользователь запросил: 100.000000 USDT
-Нужно отправить:       100.347000 USDT
+lotteries
+lottery_prizes
+lottery_ticket_purchases
+lottery_tickets
+lottery_winners
+user_notifications
 ```
 
-Другой активной заявке на ту же базовую сумму будет выдано другое точное значение, например `100.582000`.
+Билет оплачивается через `WalletService` операцией `lottery_ticket_purchase`. Денежный приз выдаётся операцией `lottery_prize_credit` с уникальным idempotency key победителя.
 
-Точная сумма резервируется отдельной записью `DepositAmountReservation` с уникальным ограничением БД. Это защищает от одновременной выдачи одинаковой суммы даже при конкурентных запросах.
+Выбор победителей:
 
-Заявка действует 30 минут. Сумма остаётся зарезервированной минимум 24 часа, чтобы запоздалый перевод не сопоставился с новым пользователем.
+- случайный — `secrets.SystemRandom`;
+- ручной — администратор выбирает конкретный билет;
+- результат становится клиентским только после подтверждения администратора.
 
-> Схема с одним адресом и уникальными суммами подходит для MVP
-> и небольшого количества одновременных пополнений.
-
-### Что делает deposit worker
-
-`app/workers/deposit_worker.py` по умолчанию каждые 20 секунд:
-
-1. получает историю депозитов через `BinanceReadOnlyClient`;
-2. оставляет только успешные USDT;
-3. нормализует `TRX`, `TRON` и `TRC20` к внутреннему значению `TRON`;
-4. проверяет адрес проекта;
-5. проверяет уникальность Binance deposit id;
-6. проверяет уникальность пары `(network, txid)`;
-7. ищет заявку с точной суммой;
-8. зачисляет фактически полученную сумму;
-9. создаёт `UnmatchedDeposit`, если заявку определить нельзя.
-
-Ключ автоматического зачисления:
+Публичные endpoints:
 
 ```text
-deposit:binance:{binance_deposit_id}
+GET  /api/v1/lotteries
+GET  /api/v1/lotteries/{id}
+GET  /api/v1/lotteries/me/tickets
+GET  /api/v1/lotteries/{id}/my-tickets
+POST /api/v1/lotteries/{id}/tickets
 ```
 
-Даже если worker прочитает одну запись несколько раз, баланс изменится только один раз.
+Административные endpoints находятся под `/api/v1/admin/lotteries`.
 
-### Binance endpoint
+## Конкурентность
 
-Read-only клиент использует только:
+Все вызовы SQLAlchemy `with_for_update` содержат явный параметр `of=Model`. Это важно при relationships с eager `LEFT OUTER JOIN`: PostgreSQL не разрешает блокировать nullable-сторону outer join.
+
+Пакетные workers используют:
+
+```python
+.with_for_update(of=Model, skip_locked=True)
+```
+
+Тест `test_locking_regressions.py` анализирует AST всех runtime-файлов и не допускает неявный `FOR UPDATE`.
+
+## Клиентские программы и рефералы
+
+У программы есть уровень `starter`, `standard` или `premium`, название, описания, фото, цена, срок и график вознаграждений. Финансовые условия копируются в пользовательскую активацию.
+
+Реферальная логика:
+
+- 10% от каждой активации приглашённого;
+- 2 USDT за каждое вознаграждение приглашённого по Premium;
+- все начисления идемпотентны.
+
+## Ethereum/Infura
+
+Автоматический мониторинг поддерживает:
 
 ```text
-GET /sapi/v1/capital/deposit/hisrec
+Ethereum Mainnet
+USDT ERC-20
+Infura JSON-RPC
+Contract: 0xdac17f958d2ee523a2206206994597c13d831ec7
+Decimals: 6
 ```
 
-Запрос является подписанным USER_DATA-запросом, поэтому для чтения нужны API key и secret. HMAC-подпись реализована отдельно в `app/integrations/binance/signature.py`.
+`deposit-worker` читает подтверждённые события `Transfer`, сохраняет их в `blockchain_deposits` и сопоставляет с заявками по адресу и точной сумме. Курсор хранится в `blockchain_sync_states`.
 
-Официальная документация:
-
-- https://developers.binance.com/docs/wallet/capital/deposite-history
-- https://developers.binance.com/legacy-docs/binance-spot-api-docs/rest-api/request-security
-
-Binance может менять API, ограничения и условия обслуживания, поэтому вся интеграция изолирована в папке:
-
-```text
-app/integrations/binance/
-```
-
-Внутри Binance-клиента нет логики сопоставления пользователей. Клиент только получает и нормализует внешние данные.
-
-### Пользовательское API пополнений
-
-```text
-POST /api/v1/wallet/deposits
-GET  /api/v1/wallet/deposits
-GET  /api/v1/wallet/deposits/{id}
-```
-
-Пример запроса:
-
-```json
-{
-  "amount": "100.000000"
-}
-```
-
-Ответ содержит точную сумму, адрес, срок и предупреждение о выборе сети.
-
-## Проблемные пополнения и поддержка
-
-Если пользователь отправил неправильную сумму, перевёл после истечения заявки или не получил зачисление, депозит сохраняется в `UnmatchedDeposit`.
-
-Причины:
-
-```text
-wrong_amount
-expired_invoice
-invoice_not_found
-duplicate_candidate
-unknown
-```
-
-Пользователь создаёт обращение категории `deposit_problem`, указывает TxID и при наличии выбирает свою заявку.
-
-```text
-POST /api/v1/support/tickets
-```
-
-TxID TRON проверяется как строка из 64 шестнадцатеричных символов. При создании обращения backend:
-
-1. ищет `BinanceDeposit` и `UnmatchedDeposit`;
-2. связывает найденную запись с обращением;
-3. проверяет, использовался ли TxID ранее;
-4. не меняет баланс автоматически при конфликте владельцев;
-5. показывает администратору предупреждение.
-
-Администратор видит пользователя, email, ожидаемую и фактическую сумму, Binance deposit id, TxID, историю сообщений и вложения.
-
-Ручное зачисление выполняется только через `WalletService` с ключом:
-
-```text
-manual-deposit:{binance_deposit_id}
-```
-
-Повторное нажатие не зачислит сумму второй раз.
-
-### Действия администратора
-
-Прямой разбор списка:
-
-```text
-GET  /api/v1/admin/deposits/unmatched
-GET  /api/v1/admin/deposits/unmatched/{id}
-POST /api/v1/admin/deposits/unmatched/{id}/assign
-POST /api/v1/admin/deposits/unmatched/{id}/ignore
-```
-
-Разбор через обращение:
-
-```text
-GET  /api/v1/admin/support/tickets/{id}
-POST /api/v1/admin/support/tickets/{id}/messages
-POST /api/v1/admin/support/tickets/{id}/status
-POST /api/v1/admin/support/tickets/{id}/resolve-deposit
-```
-
-### Ручная обработка проблемного депозита
-
-1. Откройте обращение или список `unmatched`.
-2. Сверьте TxID, сеть, адрес и фактическую сумму.
-3. Найдите пользователя.
-4. При наличии выберите его `DepositInvoice`.
-5. Выполните `assign` или `resolve-deposit`.
-6. Проверьте созданный `WalletTransaction` и запись `AuditLog`.
-7. Ответьте пользователю и закройте обращение.
-
-Нельзя назначать депозит, уже зачисленный другому пользователю, без отдельной проверки конфликта.
-
-## Ручной вывод
-
-Вывод не автоматизирован. Backend не содержит API-ключ с разрешением на вывод.
-
-Пользователь создаёт заявку:
-
-```text
-POST /api/v1/wallet/withdrawals
-```
-
-При создании:
-
-1. проверяется TRON-адрес;
-2. проверяется минимальная сумма;
-3. `amount + fee` переносится из `available` в `locked`;
-4. создаётся `withdrawal_hold`;
-5. статус становится `pending_review`.
-
-Администратор:
-
-```text
-POST /api/v1/admin/withdrawals/{id}/approve
-POST /api/v1/admin/withdrawals/{id}/reject
-POST /api/v1/admin/withdrawals/{id}/mark-sent
-POST /api/v1/admin/withdrawals/{id}/complete
-```
-
-### Как вручную завершить вывод
-
-1. Откройте заявку в административном API.
-2. Проверьте пользователя, TRON-адрес, сумму и locked balance.
-3. Нажмите `approve`.
-4. Вручную откройте интерфейс Binance.
-5. Отправьте USDT через сеть TRON (TRC20).
-6. Скопируйте blockchain TxID.
-7. Вызовите `mark-sent`, передав TxID и фактическую комиссию.
-8. После подтверждения перевода вызовите `complete`.
-9. Backend уменьшит locked balance и создаст `withdrawal_complete`.
-
-Если фактическая комиссия ниже первоначально заблокированной, разница возвращается в available при завершении. Если она выше, backend дополнительно блокирует разницу перед статусом `sent`.
-
-При отклонении или допустимой пользовательской отмене средства возвращаются один раз через `withdrawal_refund`.
-
-## Binance API-ключ только для чтения
-
-Интерфейс Binance может изменяться, поэтому перед production-запуском сверяйтесь с актуальной документацией и доступными настройками аккаунта.
-
-Общий безопасный порядок:
-
-1. Создайте отдельный API-ключ для backend-чтения.
-2. Включите только разрешение чтения, необходимое для USER_DATA endpoint.
-3. Не включайте торговлю.
-4. Не включайте вывод.
-5. Не включайте spot/margin/futures transfer, margin или futures permissions.
-6. Ограничьте ключ по статическим IP-адресам worker-сервера.
-7. Сохраните key и secret только в `.env` или secret manager.
-8. Никогда не передавайте secret через REST API.
-9. Регулярно проверяйте ограничения ключа в Binance.
-
-`BINANCE_API_SECRET` нужен для подписи read-only-запроса. Наличие secret само по себе не означает, что ключ должен иметь право вывода.
-
-Проект не вызывает Binance withdrawal endpoint и не содержит withdrawal worker.
-
-## Запуск через Docker Compose
-
-Файл `docker-compose.yml` предназначен для development и локальной проверки.
-PostgreSQL публикуется только на `127.0.0.1:5432`, поэтому он не доступен
-на внешнем сетевом интерфейсе хоста. Для production используйте отдельную
-конфигурацию без bind mount исходников, с reverse proxy и управлением секретами.
-
-### 1. Подготовить `.env`
+## Запуск
 
 ```bash
 cp .env.example .env
-```
-
-Минимально измените:
-
-```env
-JWT_SECRET=длинная-случайная-строка
-BINANCE_DEPOSIT_ADDRESS=T...
-BINANCE_API_KEY=...
-BINANCE_API_SECRET=...
-```
-
-Для запуска без реальных запросов Binance:
-
-```env
-BINANCE_ENABLED=false
-```
-
-### 2. Запустить PostgreSQL
-
-```bash
 docker compose up -d db
-```
-
-### 3. Применить миграции
-
-```bash
+docker compose build api deposit-worker reward-worker email-worker
 docker compose run --rm api alembic upgrade head
-```
-
-### 4. Создать администратора
-
-```bash
 docker compose run --rm api python scripts/create_admin.py
+docker compose up -d
 ```
 
-Скрипт запросит email и пароль. Для автоматизированного development-запуска допустимы переменные:
+При запуске из общего workspace используйте корневой `docker-compose.yml`.
 
-```bash
-docker compose run --rm \
-  -e ADMIN_EMAIL=admin@example.com \
-  -e ADMIN_PASSWORD='сильный-пароль' \
-  api python scripts/create_admin.py
-```
-
-Не храните production-пароль в shell history или репозитории.
-
-### 5. Запустить API и workers
-
-```bash
-docker compose up api deposit-worker reward-worker
-```
-
-Фоновый режим:
-
-```bash
-docker compose up -d api deposit-worker reward-worker
-```
-
-### 6. Проверить состояние
-
-```bash
-curl http://localhost:8000/health
-```
-
-Ожидаемый ответ:
-
-```json
-{
-  "status": "ok"
-}
-```
-
-## Миграции и служебные скрипты
-
-Текущая начальная миграция:
-
-```text
-alembic/versions/0001_initial.py
-```
-
-Применить:
+## Миграции
 
 ```bash
 alembic upgrade head
+alembic current
+alembic history
+alembic check
 ```
 
-Откатить один шаг:
-
-```bash
-alembic downgrade -1
-```
-
-Создать новую миграцию после изменения моделей:
-
-```bash
-alembic revision --autogenerate -m "описание изменения"
-alembic upgrade head
-```
-
-### Demo data
-
-Только при `APP_ENV=development`:
-
-```bash
-docker compose run --rm api python scripts/seed_demo_data.py
-```
-
-При локальном запуске Python вне Docker используйте:
-
-```bash
-python scripts/seed_demo_data.py
-```
-
-В этом случае `DATABASE_URL` должен указывать на доступный PostgreSQL-хост
-(обычно `localhost`, а не имя Compose-сервиса `db`).
-
-Создаются:
+Последняя миграция:
 
 ```text
-admin@example.com / Admin123!
-user@example.com  / User123!
+0006_legal_consent_evidence
 ```
 
-Также создаются демонстрационный тариф, новость и внутренний баланс пользователя. Скрипт отказывается работать вне development.
-
-Эти данные предназначены только для локальной разработки. Не используйте их в production.
+Миграции `0005` и `0006` добавляют email verification, password reset, consent audit, outbox, notifications, lottery-модель и расширенные доказательства электронного акцепта. Существующие пользователи автоматически остаются подтверждёнными.
 
 ## Тесты
-
-Тесты используют отдельную async SQLite-БД для быстрого запуска и fake Binance-клиент. Реальные запросы Binance не выполняются.
-
-Локально:
 
 ```bash
 pytest -q
 ```
 
-Через Docker:
+Текущий набор: 56 тестов. Покрыты авторизация, email, согласия, программы, rewards, рефералы, Ethereum-пополнения, выводы, поддержка, публикации, лотереи, уведомления, idempotency и PostgreSQL locking regressions.
 
-```bash
-docker compose run --rm api pytest -q
-```
-
-По умолчанию используется временная async SQLite-БД. Для дополнительной
-проверки PostgreSQL создайте **отдельную тестовую базу** и передайте её через
-`TEST_DATABASE_URL`:
-
-```bash
-docker compose exec db createdb -U postgres subscriptions_test
-docker compose run --rm \
-  -e TEST_DATABASE_URL=postgresql+asyncpg://postgres:postgres@db:5432/subscriptions_test \
-  api pytest -q
-```
-
-Тестовый fixture выполняет `drop_all/create_all`; никогда не указывайте в
-`TEST_DATABASE_URL` development- или production-базу.
-
-Проверяются:
-
-- регистрация, login и refresh;
-- запрет admin API для обычного пользователя;
-- покупка подписки и недостаточный баланс;
-- `Idempotency-Key` покупки, конфликт повторного ключа и replay после деактивации тарифа;
-- создание reward schedule;
-- отсутствие двойного reward credit;
-- уникальные суммы deposit invoice;
-- автоматическое Binance-зачисление;
-- защита от повторного Binance deposit id и TxID;
-- `UnmatchedDeposit` при неправильной сумме;
-- старый перевод не сопоставляется заявке, созданной позже;
-- создание обращения с TxID;
-- загрузка и защищённое скачивание файла;
-- запрет доступа к чужому обращению;
-- ручное связывание и отсутствие двойного зачисления;
-- перенос средств в locked;
-- возврат при отклонении;
-- отсутствие двойного возврата;
-- завершение вывода и уникальность TxID;
-- недоступность черновика новости;
-- отсутствие `float` в денежных колонках;
-- лимиты и типы вложений;
-- нормализация ответа Binance через `httpx.MockTransport`.
-
-Перед production рекомендуется дополнительно запускать интеграционные тесты на PostgreSQL, чтобы отдельно проверить реальную конкурентную семантику `FOR UPDATE SKIP LOCKED`.
-
-## Swagger
+## API
 
 После запуска:
 
 ```text
-http://localhost:8000/docs
+Swagger: http://localhost:8000/docs
+ReDoc:   http://localhost:8000/redoc
+Health:  http://localhost:8000/health
 ```
 
-ReDoc:
-
-```text
-http://localhost:8000/redoc
-```
-
-Для защищённых endpoints нажмите **Authorize** и вставьте access token.
-
-## Формат ошибок и пагинация
-
-Ошибка:
-
-```json
-{
-  "error": {
-    "code": "insufficient_balance",
-    "message": "Недостаточно средств",
-    "details": {}
-  }
-}
-```
-
-Пагинация:
-
-```text
-?page=1&page_size=20
-```
-
-Максимальный `page_size` — 100.
-
-Ответ:
-
-```json
-{
-  "items": [],
-  "page": 1,
-  "page_size": 20,
-  "total": 0
-}
-```
-
-## Вложения и переход на S3
-
-В development файлы хранятся в:
-
-```text
-uploads/support/
-```
-
-Ограничения по умолчанию:
-
-```text
-до 3 файлов на сообщение
-до 5 MB на файл
-PNG, JPG, JPEG, WEBP, PDF
-```
-
-Защита:
-
-- пользовательское имя очищается через `Path(...).name`;
-- реальное имя генерируется UUID;
-- проверяются расширение, MIME type и сигнатура файла;
-- запрещён выход за upload directory;
-- серверный путь не возвращается в API;
-- скачивание доступно только владельцу обращения или администратору.
-
-### Как заменить локальное хранение на S3
-
-1. Оставьте текущие проверки формата и размера в `app/utils/files.py`.
-2. Замените запись `Path.write_bytes` на загрузку в S3-compatible storage.
-3. Храните в `SupportAttachment.file_path` не локальный путь, а object key.
-4. Не делайте bucket публичным.
-5. В защищённом download endpoint после проверки владельца создавайте короткоживущий presigned URL или стримьте объект через backend.
-6. Добавьте удаление объекта при откате транзакции БД.
-7. Добавьте антивирусную проверку при необходимости.
-
-## Административный аудит
-
-`AuditLog` создаётся для:
-
-- создания и изменения тарифа;
-- активации и деактивации тарифа;
-- заморозки пользователя;
-- ручной корректировки баланса;
-- ручного зачисления депозита;
-- подтверждения, отклонения, отправки и завершения вывода;
-- изменения статуса обращения;
-- разрешения проблемного пополнения.
-
-API аудита доступно только на чтение:
-
-```text
-GET /api/v1/admin/audit-logs
-```
-
-`AuditLog` и `WalletTransaction` нельзя изменять или удалять через API. ORM также блокирует update/delete этих моделей.
-
-## Безопасность production
-
-Перед запуском проверьте:
-
-- `APP_ENV=production`;
-- `DEBUG=false`;
-- `JWT_SECRET` не равен `change-me`;
-- `.env` не добавлен в Git;
-- Binance key имеет только чтение;
-- Binance key ограничен по IP;
-- withdrawal/trading/margin/futures permissions отключены;
-- PostgreSQL доступен только доверенной сети;
-- HTTPS завершается на reverse proxy;
-- upload volume имеет минимальные файловые права;
-- резервные копии БД шифруются;
-- логи не собирают Authorization, JWT, пароли и секреты;
-- worker запущен в одном или нескольких экземплярах с поддержкой DB locking;
-- настроены алерты для `failed` reward payout и `unresolved` deposits;
-- настроен мониторинг свободного баланса реального Binance-аккаунта;
-- выполнена проверка требований KYC/AML, защиты потребителей и обработки персональных данных.
-
-Production-конфигурация запрещает стандартный `JWT_SECRET` и требует Binance-секреты, если интеграция включена.
-
-## Известные ограничения
-
-1. Доступно 999 идентификаторов суммы для одной базовой суммы в пределах периода резервирования. При высокой одновременной нагрузке потребуется отдельный адрес, memo/tag-механизм или собственный blockchain indexer.
-2. Deposit worker использует polling, поэтому зачисление не мгновенное.
-3. Локальные требования Binance, Travel Rule и доступность конкретного endpoint зависят от юрисдикции аккаунта.
-4. Локальное хранение вложений подходит для одного сервера; для нескольких API-инстансов нужен общий object storage.
-5. Вывод выполняется человеком и зависит от внутренних операционных процедур администратора.
-6. Health endpoint проверяет процесс API, но не выполняет глубокую проверку Binance и PostgreSQL.
-7. Быстрые тесты используют SQLite; перед production нужны отдельные PostgreSQL concurrency-тесты.
-8. Проект не включает frontend, KYC-провайдера, почтовые уведомления, 2FA и антивирусный сервис.
-9. Deposit worker читает окно `BINANCE_LOOKBACK_HOURS`; после более долгого простоя нужно временно увеличить окно и выполнить сверку депозитов.
-
-## Юридическое предупреждение
-
-Техническая реализация не подтверждает законность бизнес-модели.
-Перед запуском с реальными средствами требуется юридическая проверка
-для страны регистрации проекта и стран пользователей.
-
-Также требуется отдельно проверить правила Binance, ограничения по API, правила работы с виртуальными активами, требования к идентификации пользователей, бухгалтерскому учёту и защите данных.
-
-## Как работает срок заявки на пополнение
-
-Первые 30 минут являются основным сроком оплаты. После этого заявка становится истёкшей, но её точная сумма остаётся закреплена за пользователем до конца периода резервирования 24 часа. Если точная сумма поступила до этого момента, депозит зачисляется автоматически. Если сумма отличается или перевод пришёл позже, создаётся ручная проверка.
-
-Примеры:
-- 100.347 USDT через 10 минут → автоматическое зачисление.
-- 100.347 USDT через 3 часа → позднее автоматическое зачисление.
-- 100.000 USDT вместо 100.347 → ручная проверка.
-- 100.347 USDT через 25 часов → ручная проверка.
-
-
-## Подключение клиентского сайта и админ-панели
-
-Для локальной разработки разрешены только явные browser origins:
-
-```env
-CORS_ORIGINS=http://localhost:3000,http://localhost:3001
-```
-
-В production перечислите реальные HTTPS origins через запятую. Значение `*` в production запрещено валидатором настроек.
-
-Frontend получает безопасные публичные лимиты через:
-
-```text
-GET /api/v1/system/config
-```
-
-Endpoint возвращает только монету, сеть, минимальные суммы, комиссию, сроки 30/24 часа и лимиты вложений. Binance keys, JWT secret и DATABASE_URL не возвращаются.
-
-Для редактирования новости администратором доступен:
-
-```text
-GET /api/v1/admin/posts/{post_id}
-```
-
-Эти изменения не требуют миграции БД.
-
-Для раздела нераспознанных пополнений `UnmatchedDepositRead` дополнительно возвращает внешний Binance deposit ID, монету, фактическое время депозита, нормализованный Binance-статус и признак уже использованного TxID. Эти значения берутся из связанной записи `BinanceDeposit`; миграция БД не требуется.
+Статическая схема OpenAPI находится в `../BACKEND_OPENAPI.json`.

@@ -46,8 +46,8 @@ export function PlansPage() {
   return (
     <>
       <PageHeader
-        title="Подписки"
-        description="Условия новых программ. Уже купленные подписки сохраняют свои финансовые параметры."
+        title="Программы"
+        description="Название, описание, фотография и условия клиентских программ."
         actions={
           <Link className="button button-primary" to="/plans/new">
             <Plus />
@@ -62,11 +62,11 @@ export function PlansPage() {
       ) : data.items.length === 0 ? (
         <EmptyState
           title="Программ пока нет"
-          description="Создайте первый вариант подписки."
+          description="Создайте первую клиентскую программу."
         />
       ) : (
         <>
-          <DataTable label="Программы подписки">
+          <DataTable label="Клиентские программы">
             <thead>
               <tr>
                 <th>Название</th>
@@ -83,7 +83,7 @@ export function PlansPage() {
                 <tr key={p.id}>
                   <td>
                     <strong>{p.title}</strong>
-                    <small>{p.slug}</small>
+                    <small>{label(p.tier)}</small>
                   </td>
                   <td>
                     {formatMoney(p.price)} {p.asset}

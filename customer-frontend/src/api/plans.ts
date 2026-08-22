@@ -5,5 +5,5 @@ export const listPlans = (page = 1, pageSize = 20) =>
   apiRequest<Pagination<Plan>>(`/plans?page=${page}&page_size=${pageSize}`, {
     skipAuth: true,
   });
-export const getPlan = (slug: string) =>
-  apiRequest<Plan>(`/plans/${encodeURIComponent(slug)}`, { skipAuth: true });
+export const getPlan = (id: string) =>
+  apiRequest<Plan>(`/plans/${encodeURIComponent(id)}`, { skipAuth: true });

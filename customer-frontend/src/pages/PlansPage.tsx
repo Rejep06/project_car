@@ -6,6 +6,7 @@ import { EmptyState } from "../components/EmptyState";
 import { LoadingSpinner } from "../components/LoadingSpinner";
 import { PlanCard } from "../components/PlanCard";
 import { compareMoney } from "../utils/money";
+import { planTierOrder } from "../utils/programs";
 
 export function PlansPage() {
   const [plans, setPlans] = useState<Plan[]>([]);
@@ -25,6 +26,11 @@ export function PlansPage() {
         .toLowerCase()
         .includes(query.toLowerCase()),
     );
+    if (sort === "default")
+      result.sort((a, b) =>
+        planTierOrder[a.tier] - planTierOrder[b.tier] ||
+        compareMoney(a.price, b.price),
+      );
     if (sort === "price-asc")
       result.sort((a, b) => compareMoney(a.price, b.price));
     if (sort === "price-desc")
@@ -37,12 +43,11 @@ export function PlansPage() {
     <section className="section page-hero">
       <div className="container">
         <div className="section-heading">
-          <p className="eyebrow">Программа подписок</p>
+          <p className="eyebrow">Клиентские программы</p>
           <h1>Условия для клиентов автомобильной компании</h1>
           <p>
-            Стоимость, срок действия и график вознаграждений загружаются из системы управления программами.
-            Служебные категории `game/application` намеренно не показываются на
-            автомобильном сайте.
+            Выберите программу по названию, описанию, стоимости, сроку действия
+            и графику вознаграждений.
           </p>
         </div>
         <div className="catalog-tools">

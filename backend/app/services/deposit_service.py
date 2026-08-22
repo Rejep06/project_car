@@ -1,4 +1,4 @@
-"""Уникальные deposit invoice, обработка Binance и ручное зачисление."""
+"""Уникальные заявки, обработка переводов блокчейна и ручное зачисление."""
 
 import secrets
 from datetime import timedelta
@@ -12,21 +12,23 @@ from sqlalchemy.orm import joinedload
 from app.core.config import Settings, get_settings
 from app.core.exceptions import AppError
 from app.db.enums import (
-    BinanceDepositStatus,
+    BlockchainDepositStatus,
     DepositInvoiceStatus,
     UnmatchedDepositReason,
     UnmatchedDepositStatus,
     WalletOperationType,
 )
 from app.db.models import (
-    BinanceDeposit,
+    BlockchainDeposit,
     DepositAmountReservation,
     DepositInvoice,
+    DepositWallet,
     UnmatchedDeposit,
     User,
 )
-from app.integrations.binance.schemas import BinanceDepositData
+from app.integrations.infura.schemas import BlockchainTransferData
 from app.services.audit_service import AuditService
+from app.services.deposit_wallet_service import DepositWalletService
 from app.services.wallet_service import WalletService
 from app.utils.datetime import utcnow
 from app.utils.money import ATOMIC_FACTOR, MAX_ATOMIC, format_amount, parse_amount
@@ -35,7 +37,6 @@ from app.utils.money import ATOMIC_FACTOR, MAX_ATOMIC, format_amount, parse_amou
 class DepositService:
     @staticmethod
     async def expire_invoices(session: AsyncSession) -> int:
-        """Переводит просроченные ожидающие заявки в статус expired."""
         result = await session.execute(
             update(DepositInvoice)
             .where(
@@ -53,18 +54,16 @@ class DepositService:
         *,
         user: User,
         amount: str,
+        deposit_wallet_id: UUID | None = None,
         settings: Settings | None = None,
     ) -> DepositInvoice:
         """Резервирует уникальную точную сумму минимум на заданный срок."""
         settings = settings or get_settings()
         if user.is_frozen:
             raise AppError("user_frozen", "Операции пользователя заморожены", status_code=403)
-        if not settings.binance_deposit_address:
-            raise AppError(
-                "deposit_address_not_configured",
-                "Адрес пополнения временно недоступен",
-                status_code=503,
-            )
+        deposit_wallet = await DepositWalletService.get_active(
+            session, deposit_wallet_id, settings
+        )
         requested_atomic = parse_amount(amount)
         if requested_atomic < settings.min_deposit_amount_atomic:
             raise AppError(
@@ -79,7 +78,6 @@ class DepositService:
                 status_code=409,
             )
 
-        # Уникальное ограничение таблицы reservation защищает также от гонки процессов.
         for _attempt in range(10):
             now = utcnow()
             await session.execute(
@@ -121,9 +119,10 @@ class DepositService:
                 user_id=user.id,
                 requested_amount_atomic=requested_atomic,
                 expected_amount_atomic=expected_atomic,
-                asset=settings.asset,
-                network=settings.network,
-                deposit_address=settings.binance_deposit_address,
+                deposit_wallet_id=deposit_wallet.id,
+                asset=deposit_wallet.asset,
+                network=deposit_wallet.network,
+                deposit_address=deposit_wallet.address,
                 status=DepositInvoiceStatus.WAITING,
                 expires_at=expires_at,
                 amount_reserved_until=reserved_until,
@@ -190,26 +189,36 @@ class DepositService:
             )
         )
         if invoice is None:
-            raise AppError("deposit_invoice_not_found", "Заявка на пополнение не найдена", status_code=404)
+            raise AppError(
+                "deposit_invoice_not_found", "Заявка на пополнение не найдена", status_code=404
+            )
         return invoice
 
     @staticmethod
-    def is_target_deposit(data: BinanceDepositData, settings: Settings) -> bool:
-        """Фильтрует только успешные USDT TRON на адрес проекта."""
+    def is_target_deposit(data: BlockchainTransferData, wallet: DepositWallet) -> bool:
+        """Дополнительно проверяет, что событие относится к настройкам кошелька."""
+        expected_contract = (wallet.token_contract_address or "").lower()
+        actual_contract = (data.token_contract_address or "").lower()
         return (
-            data.coin == settings.asset.upper()
-            and data.network == settings.network.upper()
-            and data.status == BinanceDepositStatus.SUCCESS
-            and data.address == settings.binance_deposit_address
+            data.status == BlockchainDepositStatus.SUCCESS
+            and data.asset == wallet.asset.upper()
+            and data.network == wallet.network.upper()
+            and data.provider == wallet.provider.lower()
+            and data.address.lower() == wallet.address.lower()
+            and actual_contract == expected_contract
+            and data.confirmations >= wallet.confirmations_required
         )
 
     @staticmethod
     async def _unmatched_reason(
-        session: AsyncSession, data: BinanceDepositData
+        session: AsyncSession, data: BlockchainTransferData
     ) -> UnmatchedDepositReason:
         exact_invoice = await session.scalar(
             select(DepositInvoice.id).where(
                 DepositInvoice.expected_amount_atomic == data.amount_atomic,
+                func.lower(DepositInvoice.deposit_address) == data.address.lower(),
+                DepositInvoice.network == data.network,
+                DepositInvoice.asset == data.asset,
                 DepositInvoice.created_at <= data.detected_at,
                 DepositInvoice.amount_reserved_until < data.detected_at,
             )
@@ -217,7 +226,6 @@ class DepositService:
         if exact_invoice is not None:
             return UnmatchedDepositReason.EXPIRED_INVOICE
 
-        # Неверная уникальная дробь обычно отличается от ожидаемой менее чем на 1 USDT.
         nearby = await session.scalar(
             select(DepositInvoice.id).where(
                 DepositInvoice.status.in_(
@@ -227,6 +235,9 @@ class DepositService:
                         DepositInvoiceStatus.EXPIRED,
                     ]
                 ),
+                func.lower(DepositInvoice.deposit_address) == data.address.lower(),
+                DepositInvoice.network == data.network,
+                DepositInvoice.asset == data.asset,
                 DepositInvoice.created_at <= data.detected_at,
                 DepositInvoice.amount_reserved_until >= data.detected_at,
                 DepositInvoice.expected_amount_atomic.between(
@@ -240,19 +251,20 @@ class DepositService:
         return UnmatchedDepositReason.INVOICE_NOT_FOUND
 
     @staticmethod
-    async def process_binance_deposit(
+    async def process_blockchain_deposit(
         session: AsyncSession,
         *,
-        data: BinanceDepositData,
-    ) -> tuple[BinanceDeposit, bool]:
-        """Сохраняет депозит и один раз зачисляет фактически полученную сумму."""
+        data: BlockchainTransferData,
+    ) -> tuple[BlockchainDeposit, bool]:
+        """Сохраняет событие и один раз зачисляет фактически полученную сумму."""
         existing = await session.scalar(
-            select(BinanceDeposit).where(
+            select(BlockchainDeposit).where(
                 or_(
-                    BinanceDeposit.binance_deposit_id == data.binance_deposit_id,
+                    BlockchainDeposit.external_id == data.external_id,
                     (
-                        (BinanceDeposit.network == data.network)
-                        & (BinanceDeposit.txid == data.txid)
+                        (BlockchainDeposit.network == data.network)
+                        & (BlockchainDeposit.txid == data.txid)
+                        & (BlockchainDeposit.log_index == data.log_index)
                     ),
                 )
             )
@@ -260,14 +272,21 @@ class DepositService:
         if existing is not None:
             return existing, False
 
-        deposit = BinanceDeposit(
-            binance_deposit_id=data.binance_deposit_id,
+        deposit = BlockchainDeposit(
+            external_id=data.external_id,
             txid=data.txid,
+            log_index=data.log_index,
+            block_number=data.block_number,
+            block_hash=data.block_hash,
+            from_address=data.from_address,
             address=data.address,
-            coin=data.coin,
+            asset=data.asset,
             network=data.network,
+            provider=data.provider,
+            token_contract_address=data.token_contract_address,
             amount_atomic=data.amount_atomic,
             status=data.status,
+            confirmations=data.confirmations,
             detected_at=data.detected_at,
             raw_data=data.raw_data,
         )
@@ -277,19 +296,24 @@ class DepositService:
         except IntegrityError as exc:
             await session.rollback()
             existing = await session.scalar(
-                select(BinanceDeposit).where(
+                select(BlockchainDeposit).where(
                     or_(
-                        BinanceDeposit.binance_deposit_id == data.binance_deposit_id,
+                        BlockchainDeposit.external_id == data.external_id,
                         (
-                            (BinanceDeposit.network == data.network)
-                            & (BinanceDeposit.txid == data.txid)
+                            (BlockchainDeposit.network == data.network)
+                            & (BlockchainDeposit.txid == data.txid)
+                            & (BlockchainDeposit.log_index == data.log_index)
                         ),
                     )
                 )
             )
             if existing is not None:
                 return existing, False
-            raise AppError("deposit_uniqueness_conflict", "Конфликт уникальности депозита", status_code=409) from exc
+            raise AppError(
+                "deposit_uniqueness_conflict",
+                "Конфликт уникальности входящего перевода",
+                status_code=409,
+            ) from exc
 
         candidates = list(
             (
@@ -297,6 +321,9 @@ class DepositService:
                     select(DepositInvoice)
                     .where(
                         DepositInvoice.expected_amount_atomic == data.amount_atomic,
+                        func.lower(DepositInvoice.deposit_address) == data.address.lower(),
+                        DepositInvoice.network == data.network,
+                        DepositInvoice.asset == data.asset,
                         DepositInvoice.created_at <= data.detected_at,
                         DepositInvoice.status.in_(
                             [
@@ -307,33 +334,40 @@ class DepositService:
                         ),
                         DepositInvoice.amount_reserved_until >= data.detected_at,
                     )
-                    .with_for_update()
+                    .with_for_update(of=DepositInvoice)
                 )
             ).all()
         )
         if len(candidates) == 1:
             invoice = candidates[0]
             deposit.deposit_invoice_id = invoice.id
-            invoice.matched_binance_deposit_id = deposit.id
+            invoice.matched_blockchain_deposit_id = deposit.id
             invoice.status = DepositInvoiceStatus.DETECTED
-            transaction, _ = await WalletService.apply_change(
+            await WalletService.apply_change(
                 session,
                 user_id=invoice.user_id,
                 operation_type=WalletOperationType.DEPOSIT_CREDIT,
                 available_delta_atomic=data.amount_atomic,
                 locked_delta_atomic=0,
-                idempotency_key=f"deposit:binance:{data.binance_deposit_id}",
-                related_entity_type="binance_deposit",
+                idempotency_key=f"deposit:blockchain:{data.external_id}",
+                related_entity_type="blockchain_deposit",
                 related_entity_id=deposit.id,
-                description="Автоматическое зачисление Binance USDT TRC20",
-                metadata_json={"txid": data.txid, "invoice_id": str(invoice.id)},
+                description="Пополнение баланса USDT",
+                metadata_json={
+                    "txid": data.txid,
+                    "log_index": data.log_index,
+                    "invoice_id": str(invoice.id),
+                    "network": data.network,
+                },
             )
             credited_at = utcnow()
             deposit.credited_at = credited_at
             invoice.received_amount_atomic = data.amount_atomic
             invoice.status = DepositInvoiceStatus.CREDITED
             invoice.credited_at = credited_at
-            invoice.credited_after_expiration = data.detected_at.replace(tzinfo=None) > invoice.expires_at.replace(tzinfo=None)
+            invoice.credited_after_expiration = (
+                data.detected_at.replace(tzinfo=None) > invoice.expires_at.replace(tzinfo=None)
+            )
             await session.commit()
             return deposit, True
 
@@ -343,7 +377,7 @@ class DepositService:
             else await DepositService._unmatched_reason(session, data)
         )
         unmatched = UnmatchedDeposit(
-            binance_deposit_id=deposit.id,
+            blockchain_deposit_id=deposit.id,
             txid=data.txid,
             amount_atomic=data.amount_atomic,
             address=data.address,
@@ -358,16 +392,13 @@ class DepositService:
 
     @staticmethod
     async def list_unmatched(
-        session: AsyncSession,
-        *,
-        offset: int,
-        limit: int,
+        session: AsyncSession, *, offset: int, limit: int
     ) -> tuple[list[UnmatchedDeposit], int]:
         items = list(
             (
                 await session.scalars(
                     select(UnmatchedDeposit)
-                    .options(joinedload(UnmatchedDeposit.binance_deposit))
+                    .options(joinedload(UnmatchedDeposit.blockchain_deposit))
                     .order_by(UnmatchedDeposit.created_at.desc())
                     .offset(offset)
                     .limit(limit)
@@ -383,11 +414,15 @@ class DepositService:
     async def get_unmatched(session: AsyncSession, unmatched_id: UUID) -> UnmatchedDeposit:
         item = await session.scalar(
             select(UnmatchedDeposit)
-            .options(joinedload(UnmatchedDeposit.binance_deposit))
+            .options(joinedload(UnmatchedDeposit.blockchain_deposit))
             .where(UnmatchedDeposit.id == unmatched_id)
         )
         if item is None:
-            raise AppError("unmatched_deposit_not_found", "Нераспознанный депозит не найден", status_code=404)
+            raise AppError(
+                "unmatched_deposit_not_found",
+                "Нераспознанный депозит не найден",
+                status_code=404,
+            )
         return item
 
     @staticmethod
@@ -402,14 +437,22 @@ class DepositService:
     ) -> UnmatchedDeposit:
         item = await session.scalar(
             select(UnmatchedDeposit)
-            .options(joinedload(UnmatchedDeposit.binance_deposit))
+            .options(joinedload(UnmatchedDeposit.blockchain_deposit))
             .where(UnmatchedDeposit.id == unmatched_id)
-            .with_for_update()
+            .with_for_update(of=UnmatchedDeposit)
         )
         if item is None:
-            raise AppError("unmatched_deposit_not_found", "Нераспознанный депозит не найден", status_code=404)
+            raise AppError(
+                "unmatched_deposit_not_found",
+                "Нераспознанный депозит не найден",
+                status_code=404,
+            )
         if item.status == UnmatchedDepositStatus.IGNORED:
-            raise AppError("unmatched_deposit_ignored", "Депозит помечен как игнорируемый", status_code=409)
+            raise AppError(
+                "unmatched_deposit_ignored",
+                "Депозит помечен как игнорируемый",
+                status_code=409,
+            )
         if item.status == UnmatchedDepositStatus.ASSIGNED:
             if item.assigned_user_id == user_id and item.assigned_invoice_id == invoice_id:
                 return item
@@ -423,21 +466,35 @@ class DepositService:
             invoice = await session.scalar(
                 select(DepositInvoice)
                 .where(DepositInvoice.id == invoice_id)
-                .with_for_update()
+                .with_for_update(of=DepositInvoice)
             )
             if invoice is None:
-                raise AppError("deposit_invoice_not_found", "Заявка на пополнение не найдена", status_code=404)
+                raise AppError(
+                    "deposit_invoice_not_found",
+                    "Заявка на пополнение не найдена",
+                    status_code=404,
+                )
             if invoice.user_id != user_id:
-                raise AppError("invoice_owner_mismatch", "Заявка принадлежит другому пользователю", status_code=409)
+                raise AppError(
+                    "invoice_owner_mismatch",
+                    "Заявка принадлежит другому пользователю",
+                    status_code=409,
+                )
             if (
                 invoice.status == DepositInvoiceStatus.CREDITED
-                and invoice.matched_binance_deposit_id != item.binance_deposit_id
+                and invoice.matched_blockchain_deposit_id != item.blockchain_deposit_id
             ):
-                raise AppError("invoice_already_credited", "Заявка уже зачислена другим депозитом", status_code=409)
+                raise AppError(
+                    "invoice_already_credited",
+                    "Заявка уже зачислена другим депозитом",
+                    status_code=409,
+                )
 
-        deposit = item.binance_deposit
+        deposit = item.blockchain_deposit
         if deposit.credited_at is not None and deposit.deposit_invoice_id != invoice_id:
-            raise AppError("deposit_already_credited", "Депозит уже был зачислен", status_code=409)
+            raise AppError(
+                "deposit_already_credited", "Депозит уже был зачислен", status_code=409
+            )
 
         transaction, created = await WalletService.apply_change(
             session,
@@ -445,8 +502,8 @@ class DepositService:
             operation_type=WalletOperationType.DEPOSIT_CREDIT,
             available_delta_atomic=item.amount_atomic,
             locked_delta_atomic=0,
-            idempotency_key=f"manual-deposit:{deposit.binance_deposit_id}",
-            related_entity_type="binance_deposit",
+            idempotency_key=f"manual-deposit:{deposit.external_id}",
+            related_entity_type="blockchain_deposit",
             related_entity_id=deposit.id,
             description="Ручное зачисление проблемного депозита",
             metadata_json={"txid": item.txid, "admin_user_id": str(admin_user_id)},
@@ -460,7 +517,7 @@ class DepositService:
         deposit.deposit_invoice_id = invoice_id
         deposit.credited_at = deposit.credited_at or assigned_at
         if invoice is not None:
-            invoice.matched_binance_deposit_id = deposit.id
+            invoice.matched_blockchain_deposit_id = deposit.id
             invoice.received_amount_atomic = item.amount_atomic
             invoice.status = DepositInvoiceStatus.CREDITED
             invoice.credited_at = invoice.credited_at or assigned_at
@@ -494,12 +551,20 @@ class DepositService:
         item = await session.scalar(
             select(UnmatchedDeposit)
             .where(UnmatchedDeposit.id == unmatched_id)
-            .with_for_update()
+            .with_for_update(of=UnmatchedDeposit)
         )
         if item is None:
-            raise AppError("unmatched_deposit_not_found", "Нераспознанный депозит не найден", status_code=404)
+            raise AppError(
+                "unmatched_deposit_not_found",
+                "Нераспознанный депозит не найден",
+                status_code=404,
+            )
         if item.status == UnmatchedDepositStatus.ASSIGNED:
-            raise AppError("deposit_already_assigned", "Зачисленный депозит нельзя игнорировать", status_code=409)
+            raise AppError(
+                "deposit_already_assigned",
+                "Зачисленный депозит нельзя игнорировать",
+                status_code=409,
+            )
         item.status = UnmatchedDepositStatus.IGNORED
         await AuditService.record(
             session,
@@ -516,15 +581,17 @@ class DepositService:
     @staticmethod
     async def find_by_txid(
         session: AsyncSession, txid: str
-    ) -> tuple[BinanceDeposit | None, UnmatchedDeposit | None]:
+    ) -> tuple[BlockchainDeposit | None, UnmatchedDeposit | None]:
         deposit = await session.scalar(
-            select(BinanceDeposit)
-            .options(joinedload(BinanceDeposit.deposit_invoice))
-            .where(BinanceDeposit.txid == txid)
+            select(BlockchainDeposit)
+            .options(joinedload(BlockchainDeposit.deposit_invoice))
+            .where(BlockchainDeposit.txid == txid)
+            .order_by(BlockchainDeposit.log_index)
         )
         unmatched = await session.scalar(
             select(UnmatchedDeposit)
-            .options(joinedload(UnmatchedDeposit.binance_deposit))
+            .options(joinedload(UnmatchedDeposit.blockchain_deposit))
             .where(UnmatchedDeposit.txid == txid)
+            .order_by(UnmatchedDeposit.created_at)
         )
         return deposit, unmatched

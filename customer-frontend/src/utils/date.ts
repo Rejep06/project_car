@@ -6,9 +6,13 @@ export function formatDate(value: string | null | undefined): string {
   }).format(new Date(value));
 }
 
-export function formatDateOnly(value: string | null | undefined): string {
+export function formatDateOnly(
+  value: string | null | undefined,
+  timeZone?: string,
+): string {
   if (!value) return "—";
-  return new Intl.DateTimeFormat("ru-RU", { dateStyle: "long" }).format(
-    new Date(value),
-  );
+  return new Intl.DateTimeFormat("ru-RU", {
+    dateStyle: "long",
+    ...(timeZone ? { timeZone } : {}),
+  }).format(new Date(value));
 }

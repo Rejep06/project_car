@@ -105,7 +105,7 @@ export function AccountDashboardPage() {
           <span>
             {nextReward
               ? formatDate(nextReward.due_at)
-              : "Откройте подписку для полного графика"}
+              : "Откройте программу для полного графика"}
           </span>
         </Card>
       </div>

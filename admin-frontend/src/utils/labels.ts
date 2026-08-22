@@ -26,7 +26,7 @@ const labels: Record<string, string> = {
   closed: "Закрыто",
   deposit_problem: "Проблема с пополнением",
   withdrawal_problem: "Проблема с выводом",
-  subscription_problem: "Проблема с подпиской",
+  subscription_problem: "Проблема с программой",
   other: "Другое",
   user: "Пользователь",
   admin: "Администратор",
@@ -37,8 +37,17 @@ const labels: Record<string, string> = {
   week: "нед.",
   month: "мес.",
   year: "г.",
-  game: "Основная",
-  application: "Расширенная",
+  starter: "Старт",
+  standard: "Стандарт",
+  premium: "Премиум",
+  awaiting_confirmation: "Ожидает подтверждения",
+  balance: "На баланс",
+  physical: "Неденежный приз",
+  random: "Случайный выбор",
+  manual: "Ручной выбор",
+  pending: "Ожидает подтверждения",
+  confirmed: "Подтверждён",
+  refunded: "Возвращён",
 };
 export function label(value: string | null | undefined): string {
   return value ? (labels[value] ?? value) : "—";

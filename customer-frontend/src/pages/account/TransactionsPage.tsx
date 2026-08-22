@@ -28,7 +28,7 @@ export function TransactionsPage() {
     <div className="account-page">
       <div className="page-title">
         <div>
-          <p className="eyebrow">Неизменяемый журнал</p>
+          <p className="eyebrow">История баланса</p>
           <h1>Операции кошелька</h1>
         </div>
       </div>

@@ -38,4 +38,4 @@ class Post(TimestampMixin, Base):
     )
     published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), index=True, nullable=True)
 
-    author = relationship("User", lazy="joined")
+    author = relationship("User", lazy="selectin")

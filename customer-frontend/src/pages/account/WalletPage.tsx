@@ -24,7 +24,7 @@ export function WalletPage() {
     <div className="account-page">
       <div className="page-title">
         <div>
-          <p className="eyebrow">Внутренний баланс</p>
+          <p className="eyebrow">Баланс аккаунта</p>
           <h1>Кошелёк</h1>
         </div>
         <div className="page-actions">
@@ -49,7 +49,7 @@ export function WalletPage() {
                 <MoneyValue value={wallet.available_balance} />
               </strong>
               <p>
-                Можно потратить на подписку или включить в новую заявку на
+                Можно использовать для активации программы или включить в заявку на
                 вывод.
               </p>
             </Card>
@@ -58,7 +58,7 @@ export function WalletPage() {
               <strong>
                 <MoneyValue value={wallet.locked_balance} />
               </strong>
-              <p>Средства в заявках на ручной вывод.</p>
+              <p>Средства в активных заявках на вывод.</p>
             </Card>
           </div>
           <Card>

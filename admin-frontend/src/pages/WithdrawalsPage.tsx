@@ -36,7 +36,7 @@ export function WithdrawalsPage() {
     <>
       <PageHeader
         title="Ручные выводы"
-        description="Backend не отправляет средства через Binance API. Администратор выполняет перевод вручную и сохраняет TxID."
+        description="Проверьте заявку, выполните перевод и сохраните TxID операции."
       />
       <div className="filter-bar">
         <label>

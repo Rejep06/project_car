@@ -26,8 +26,8 @@ export function AuditPage() {
   return (
     <>
       <PageHeader
-        title="Audit log"
-        description="Неизменяемый журнал административных действий. Редактирование через API отсутствует."
+        title="Журнал действий"
+        description="История действий администраторов и изменений важных данных."
       />
       {error && <p className="form-error">{error}</p>}
       {loading ? (
@@ -63,7 +63,7 @@ export function AuditPage() {
                   <td>{x.ip_address ?? "—"}</td>
                   <td>
                     <details>
-                      <summary>Открыть JSON</summary>
+                      <summary>Показать изменения</summary>
                       <div className="audit-json">
                         <h4>До</h4>
                         <pre>{JSON.stringify(x.old_data, null, 2)}</pre>

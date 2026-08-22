@@ -30,7 +30,7 @@ export function UsersPage() {
     <>
       <PageHeader
         title="Пользователи"
-        description="Баланс уже включён backend в административный список — дополнительных запросов на каждую строку нет."
+        description="Пользователи, состояние аккаунтов и текущие балансы."
       />
       {error && <p className="form-error">{error}</p>}
       {loading ? (
@@ -43,6 +43,7 @@ export function UsersPage() {
             <thead>
               <tr>
                 <th>Email</th>
+                <th>Подтверждение</th>
                 <th>Роль</th>
                 <th>Состояние</th>
                 <th>Доступно</th>
@@ -57,6 +58,9 @@ export function UsersPage() {
                   <td>
                     <strong>{u.email}</strong>
                     <small className="mono">{u.id}</small>
+                  </td>
+                  <td>
+                    <StatusBadge value={u.email_verified ? "confirmed" : "pending"} />
                   </td>
                   <td>
                     <StatusBadge value={u.role} />

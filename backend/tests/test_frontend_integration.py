@@ -1,4 +1,4 @@
-"""Проверки публичной конфигурации и CORS для двух frontend-приложений."""
+"""Проверки публичной конфигурации, CORS и схем для frontend-приложений."""
 
 import pytest
 
@@ -9,12 +9,13 @@ async def test_public_system_config_does_not_expose_secrets(client):
     assert response.status_code == 200
     body = response.json()
     assert body["asset"] == "USDT"
-    assert body["network"] == "TRON (TRC20)"
+    assert body["network"] == "Ethereum (ERC-20)"
     assert body["deposit_invoice_ttl_minutes"] == 30
     assert body["deposit_amount_reservation_hours"] == 24
     serialized = str(body).lower()
     assert "secret" not in serialized
     assert "api_key" not in serialized
+    assert "infura" not in serialized
     assert "database" not in serialized
 
 
@@ -45,18 +46,23 @@ async def test_admin_frontend_origin_is_allowed(client):
     assert response.headers["access-control-allow-origin"] == "http://localhost:3001"
 
 
-def test_unmatched_deposit_schema_exposes_real_binance_fields():
-    """Админ-интерфейс получает внешний Binance ID и фактическое время депозита."""
+def test_unmatched_deposit_schema_exposes_blockchain_event_fields():
+    """Админ-интерфейс получает фактические поля события ERC-20."""
     from app.main import app
 
     schema = app.openapi()["components"]["schemas"]["UnmatchedDepositRead"]["properties"]
     for field in (
-        "binance_record_id",
-        "binance_deposit_id",
-        "coin",
-        "binance_status",
+        "blockchain_record_id",
+        "event_id",
+        "txid",
+        "log_index",
+        "block_number",
+        "asset",
+        "provider",
+        "deposit_status",
+        "confirmations",
         "deposit_time",
         "txid_already_used",
     ):
         assert field in schema
-    assert schema["binance_deposit_id"]["type"] == "string"
+    assert schema["event_id"]["type"] == "string"

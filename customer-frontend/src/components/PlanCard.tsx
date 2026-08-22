@@ -7,18 +7,23 @@ import {
   estimateRewardTotal,
   frequencyLabels,
 } from "../utils/rewards";
+import { planTierLabels } from "../utils/programs";
 import { Card } from "./Card";
 import { MoneyValue } from "./MoneyValue";
+import { ProgramImage } from "./ProgramImage";
 
 export function PlanCard({ plan }: { plan: Plan }) {
   const count = estimateRewardCount(plan);
   return (
     <Card className="plan-card">
-      <div className="plan-card-image" aria-hidden="true">
-        <span>{plan.title.slice(0, 1).toUpperCase()}</span>
+      <div className="plan-card-image">
+        <ProgramImage
+          src={plan.image_url}
+          alt={`Автомобиль для программы «${plan.title}»`}
+        />
       </div>
       <div className="plan-card-body">
-        <p className="eyebrow">Клиентская программа</p>
+        <p className={`program-tier program-tier-${plan.tier}`}>{planTierLabels[plan.tier]}</p>
         <h3>{plan.title}</h3>
         <p>
           {plan.short_description ||
@@ -60,7 +65,7 @@ export function PlanCard({ plan }: { plan: Plan }) {
           Ориентировочное количество начислений: {count}. Точный график
           фиксируется при активации программы.
         </p>
-        <Link className="button button-primary" to={`/plans/${plan.slug}`}>
+        <Link className="button button-primary" to={`/plans/${plan.id}`}>
           Подробнее <ArrowRight size={17} />
         </Link>
       </div>

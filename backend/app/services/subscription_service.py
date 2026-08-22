@@ -1,4 +1,4 @@
-"""Атомарная покупка подписки и создание полного графика выплат."""
+"""Атомарная активация программы, график начислений и реферальный бонус."""
 
 from uuid import UUID, uuid4
 
@@ -6,6 +6,7 @@ from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
+from app.core.config import get_settings
 from app.core.exceptions import AppError
 from app.db.enums import RewardPayoutStatus, UserSubscriptionStatus, WalletOperationType
 from app.db.models import RewardPayout, SubscriptionPlan, User, UserSubscription
@@ -20,7 +21,6 @@ class SubscriptionService:
     async def expire_subscriptions(
         session: AsyncSession, *, user_id: UUID | None = None
     ) -> int:
-        """Лениво помечает завершившийся доступ статусом expired."""
         conditions = [
             UserSubscription.status == UserSubscriptionStatus.ACTIVE,
             UserSubscription.access_ends_at <= utcnow(),
@@ -37,7 +37,6 @@ class SubscriptionService:
 
     @staticmethod
     def build_reward_schedule(subscription: UserSubscription) -> list[RewardPayout]:
-        """Создаёт календарный график; месяц рассчитывается через relativedelta."""
         if subscription.reward_amount_atomic <= 0:
             return []
         reward_ends_at = add_duration(
@@ -53,7 +52,7 @@ class SubscriptionService:
             if len(payouts) >= MAX_REWARD_PAYOUTS_PER_SUBSCRIPTION:
                 raise AppError(
                     "reward_schedule_too_large",
-                    "График вознаграждений превышает безопасный лимит",
+                    "График начислений превышает допустимый лимит",
                     status_code=409,
                 )
             payouts.append(
@@ -80,38 +79,33 @@ class SubscriptionService:
         if user.is_frozen:
             raise AppError(
                 "user_frozen",
-                "Операции пользователя заморожены",
+                "Операции пользователя временно недоступны",
                 status_code=403,
             )
 
-        # Блокировка кошелька сериализует конкурирующие покупки пользователя.
         wallet = await WalletService.lock_wallet(session, user.id)
         existing_transaction = await WalletService.find_transaction(
             session, idempotency_key
         )
         if existing_transaction is not None:
-            metadata_plan_id = (existing_transaction.metadata_json or {}).get(
-                "plan_id"
-            )
+            metadata_plan_id = (existing_transaction.metadata_json or {}).get("plan_id")
             if (
                 existing_transaction.wallet_id != wallet.id
-                or existing_transaction.operation_type
-                != WalletOperationType.SUBSCRIPTION_PURCHASE
+                or existing_transaction.operation_type != WalletOperationType.PROGRAM_PURCHASE
                 or existing_transaction.related_entity_type != "user_subscription"
                 or existing_transaction.related_entity_id is None
                 or metadata_plan_id != str(plan_id)
             ):
                 raise AppError(
                     "idempotency_key_conflict",
-                    "Idempotency key уже использован для другой операции",
+                    "Запрос уже использован для другой операции",
                     status_code=409,
                 )
             existing = await session.scalar(
                 select(UserSubscription)
                 .options(joinedload(UserSubscription.plan))
                 .where(
-                    UserSubscription.id
-                    == existing_transaction.related_entity_id,
+                    UserSubscription.id == existing_transaction.related_entity_id,
                     UserSubscription.user_id == user.id,
                     UserSubscription.plan_id == plan_id,
                 )
@@ -119,16 +113,14 @@ class SubscriptionService:
             if existing is None:
                 raise AppError(
                     "idempotency_state_error",
-                    "Не удалось восстановить результат предыдущей покупки",
+                    "Не удалось восстановить результат предыдущей активации",
                     status_code=409,
                 )
             payouts = list(
                 (
                     await session.scalars(
                         select(RewardPayout)
-                        .where(
-                            RewardPayout.user_subscription_id == existing.id
-                        )
+                        .where(RewardPayout.user_subscription_id == existing.id)
                         .order_by(RewardPayout.due_at)
                     )
                 ).all()
@@ -142,17 +134,14 @@ class SubscriptionService:
             )
         )
         if plan is None:
-            raise AppError(
-                "plan_not_found",
-                "Активный тариф не найден",
-                status_code=404,
-            )
+            raise AppError("plan_not_found", "Активная программа не найдена", status_code=404)
 
         now = utcnow()
         subscription = UserSubscription(
             id=uuid4(),
             user_id=user.id,
             plan_id=plan.id,
+            plan_tier=plan.tier,
             status=UserSubscriptionStatus.ACTIVE,
             purchased_at=now,
             access_started_at=now,
@@ -171,17 +160,41 @@ class SubscriptionService:
         await WalletService.apply_change(
             session,
             user_id=user.id,
-            operation_type=WalletOperationType.SUBSCRIPTION_PURCHASE,
+            operation_type=WalletOperationType.PROGRAM_PURCHASE,
             available_delta_atomic=-plan.price_atomic,
             locked_delta_atomic=0,
             idempotency_key=idempotency_key,
             related_entity_type="user_subscription",
             related_entity_id=subscription.id,
-            description=f"Покупка подписки: {plan.title}",
-            metadata_json={"plan_id": str(plan.id)},
+            description=f"Активация программы: {plan.title}",
+            metadata_json={"plan_id": str(plan.id), "tier": plan.tier.value},
             locked_wallet=wallet,
         )
         session.add(subscription)
+
+        settings = get_settings()
+        if user.referred_by_user_id is not None:
+            bonus_atomic = (
+                plan.price_atomic * settings.referral_purchase_bonus_percent // 100
+            )
+            if bonus_atomic > 0:
+                await WalletService.apply_change(
+                    session,
+                    user_id=user.referred_by_user_id,
+                    operation_type=WalletOperationType.REFERRAL_PURCHASE_BONUS,
+                    available_delta_atomic=bonus_atomic,
+                    locked_delta_atomic=0,
+                    idempotency_key=f"referral:purchase:{subscription.id}",
+                    related_entity_type="user_subscription",
+                    related_entity_id=subscription.id,
+                    description=f"Реферальный бонус за программу «{plan.title}»",
+                    metadata_json={
+                        "referred_user_id": str(user.id),
+                        "plan_id": str(plan.id),
+                        "percent": settings.referral_purchase_bonus_percent,
+                    },
+                )
+
         payouts = SubscriptionService.build_reward_schedule(subscription)
         session.add_all(payouts)
         await session.commit()
@@ -240,7 +253,7 @@ class SubscriptionService:
             )
         )
         if subscription is None:
-            raise AppError("subscription_not_found", "Подписка не найдена", status_code=404)
+            raise AppError("subscription_not_found", "Программа не найдена", status_code=404)
         payouts = list(
             (
                 await session.scalars(

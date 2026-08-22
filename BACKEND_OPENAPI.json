@@ -50,7 +50,171 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/UserRead"
+                  "$ref": "#/components/schemas/RegistrationResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/email-verification/confirm": {
+      "post": {
+        "tags": [
+          "Авторизация"
+        ],
+        "summary": "Confirm Email",
+        "operationId": "confirm_email_api_v1_auth_email_verification_confirm_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EmailVerificationConfirmRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmailVerificationResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/email-verification/resend": {
+      "post": {
+        "tags": [
+          "Авторизация"
+        ],
+        "summary": "Resend Email Verification",
+        "operationId": "resend_email_verification_api_v1_auth_email_verification_resend_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EmailVerificationResendRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmailVerificationResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/password-reset/request": {
+      "post": {
+        "tags": [
+          "Авторизация"
+        ],
+        "summary": "Request Password Reset",
+        "operationId": "request_password_reset_api_v1_auth_password_reset_request_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PasswordResetRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/password-reset/confirm": {
+      "post": {
+        "tags": [
+          "Авторизация"
+        ],
+        "summary": "Confirm Password Reset",
+        "operationId": "confirm_password_reset_api_v1_auth_password_reset_confirm_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PasswordResetConfirmRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmailVerificationResponse"
                 }
               }
             }
@@ -264,7 +428,7 @@
     "/api/v1/plans": {
       "get": {
         "tags": [
-          "Тарифы"
+          "Программы"
         ],
         "summary": "List Plans",
         "operationId": "list_plans_api_v1_plans_get",
@@ -317,21 +481,22 @@
         }
       }
     },
-    "/api/v1/plans/{slug}": {
+    "/api/v1/plans/{plan_id}": {
       "get": {
         "tags": [
-          "Тарифы"
+          "Программы"
         ],
         "summary": "Get Plan",
-        "operationId": "get_plan_api_v1_plans__slug__get",
+        "operationId": "get_plan_api_v1_plans__plan_id__get",
         "parameters": [
           {
-            "name": "slug",
+            "name": "plan_id",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
-              "title": "Slug"
+              "format": "uuid",
+              "title": "Plan Id"
             }
           }
         ],
@@ -612,6 +777,36 @@
             }
           }
         }
+      }
+    },
+    "/api/v1/wallet/deposit-addresses": {
+      "get": {
+        "tags": [
+          "Кошелёк"
+        ],
+        "summary": "List Deposit Addresses",
+        "operationId": "list_deposit_addresses_api_v1_wallet_deposit_addresses_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/DepositWalletPublicRead"
+                  },
+                  "type": "array",
+                  "title": "Response List Deposit Addresses Api V1 Wallet Deposit Addresses Get"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
       }
     },
     "/api/v1/wallet/deposits": {
@@ -968,6 +1163,32 @@
         }
       }
     },
+    "/api/v1/referrals/me": {
+      "get": {
+        "tags": [
+          "Реферальная программа"
+        ],
+        "summary": "Get My Referrals",
+        "operationId": "get_my_referrals_api_v1_referrals_me_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReferralSummaryRead"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
     "/api/v1/posts": {
       "get": {
         "tags": [
@@ -1049,6 +1270,448 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/PostRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/lotteries": {
+      "get": {
+        "tags": [
+          "Лотереи"
+        ],
+        "summary": "List Lotteries",
+        "operationId": "list_lotteries_api_v1_lotteries_get",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1,
+              "title": "Page"
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 20,
+              "title": "Page Size"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginationResponse_LotterySummaryRead_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/lotteries/me/tickets": {
+      "get": {
+        "tags": [
+          "Лотереи"
+        ],
+        "summary": "List My Tickets",
+        "operationId": "list_my_tickets_api_v1_lotteries_me_tickets_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1,
+              "title": "Page"
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 20,
+              "title": "Page Size"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginationResponse_LotteryTicketRead_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/lotteries/{lottery_id}": {
+      "get": {
+        "tags": [
+          "Лотереи"
+        ],
+        "summary": "Get Lottery",
+        "operationId": "get_lottery_api_v1_lotteries__lottery_id__get",
+        "parameters": [
+          {
+            "name": "lottery_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Lottery Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LotteryDetailRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/lotteries/{lottery_id}/my-tickets": {
+      "get": {
+        "tags": [
+          "Лотереи"
+        ],
+        "summary": "Get My Lottery Tickets",
+        "operationId": "get_my_lottery_tickets_api_v1_lotteries__lottery_id__my_tickets_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "lottery_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Lottery Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/LotteryTicketRead"
+                  },
+                  "title": "Response Get My Lottery Tickets Api V1 Lotteries  Lottery Id  My Tickets Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/lotteries/{lottery_id}/tickets": {
+      "post": {
+        "tags": [
+          "Лотереи"
+        ],
+        "summary": "Buy Tickets",
+        "operationId": "buy_tickets_api_v1_lotteries__lottery_id__tickets_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "lottery_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Lottery Id"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 255,
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LotteryTicketPurchaseRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LotteryPurchaseRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/notifications": {
+      "get": {
+        "tags": [
+          "Уведомления"
+        ],
+        "summary": "List Notifications",
+        "operationId": "list_notifications_api_v1_notifications_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1,
+              "title": "Page"
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 20,
+              "title": "Page Size"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginationResponse_NotificationRead_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/notifications/unread-count": {
+      "get": {
+        "tags": [
+          "Уведомления"
+        ],
+        "summary": "Unread Count",
+        "operationId": "unread_count_api_v1_notifications_unread_count_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotificationCount"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/notifications/read-all": {
+      "post": {
+        "tags": [
+          "Уведомления"
+        ],
+        "summary": "Mark All Read",
+        "operationId": "mark_all_read_api_v1_notifications_read_all_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/notifications/{notification_id}/read": {
+      "post": {
+        "tags": [
+          "Уведомления"
+        ],
+        "summary": "Mark Read",
+        "operationId": "mark_read_api_v1_notifications__notification_id__read_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "notification_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Notification Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotificationRead"
                 }
               }
             }
@@ -2179,6 +2842,215 @@
         }
       }
     },
+    "/api/v1/admin/deposit-wallets": {
+      "get": {
+        "tags": [
+          "Администратор: адреса пополнения"
+        ],
+        "summary": "List Wallets",
+        "operationId": "list_wallets_api_v1_admin_deposit_wallets_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1,
+              "title": "Page"
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 20,
+              "title": "Page Size"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginationResponse_DepositWalletRead_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Администратор: адреса пополнения"
+        ],
+        "summary": "Create Wallet",
+        "operationId": "create_wallet_api_v1_admin_deposit_wallets_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DepositWalletCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DepositWalletRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/deposit-wallets/{wallet_id}": {
+      "get": {
+        "tags": [
+          "Администратор: адреса пополнения"
+        ],
+        "summary": "Get Wallet",
+        "operationId": "get_wallet_api_v1_admin_deposit_wallets__wallet_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "wallet_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Wallet Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DepositWalletRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Администратор: адреса пополнения"
+        ],
+        "summary": "Update Wallet",
+        "operationId": "update_wallet_api_v1_admin_deposit_wallets__wallet_id__patch",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "wallet_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Wallet Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DepositWalletUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DepositWalletRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/admin/withdrawals": {
       "get": {
         "tags": [
@@ -2815,6 +3687,801 @@
         }
       }
     },
+    "/api/v1/admin/lotteries": {
+      "get": {
+        "tags": [
+          "Администратор: лотереи"
+        ],
+        "summary": "List Lotteries",
+        "operationId": "list_lotteries_api_v1_admin_lotteries_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1,
+              "title": "Page"
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 20,
+              "title": "Page Size"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginationResponse_LotterySummaryRead_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Администратор: лотереи"
+        ],
+        "summary": "Create Lottery",
+        "operationId": "create_lottery_api_v1_admin_lotteries_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LotteryCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LotteryAdminRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/lotteries/{lottery_id}": {
+      "get": {
+        "tags": [
+          "Администратор: лотереи"
+        ],
+        "summary": "Get Lottery",
+        "operationId": "get_lottery_api_v1_admin_lotteries__lottery_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "lottery_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Lottery Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LotteryAdminRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Администратор: лотереи"
+        ],
+        "summary": "Update Lottery",
+        "operationId": "update_lottery_api_v1_admin_lotteries__lottery_id__patch",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "lottery_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Lottery Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LotteryUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LotteryAdminRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/lotteries/{lottery_id}/publish": {
+      "post": {
+        "tags": [
+          "Администратор: лотереи"
+        ],
+        "summary": "Publish Lottery",
+        "operationId": "publish_lottery_api_v1_admin_lotteries__lottery_id__publish_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "lottery_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Lottery Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LotteryAdminRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/lotteries/{lottery_id}/prizes": {
+      "post": {
+        "tags": [
+          "Администратор: лотереи"
+        ],
+        "summary": "Create Prize",
+        "operationId": "create_prize_api_v1_admin_lotteries__lottery_id__prizes_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "lottery_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Lottery Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LotteryPrizeCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LotteryPrizeRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/lotteries/{lottery_id}/prizes/{prize_id}": {
+      "patch": {
+        "tags": [
+          "Администратор: лотереи"
+        ],
+        "summary": "Update Prize",
+        "operationId": "update_prize_api_v1_admin_lotteries__lottery_id__prizes__prize_id__patch",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "lottery_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Lottery Id"
+            }
+          },
+          {
+            "name": "prize_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Prize Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LotteryPrizeUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LotteryPrizeRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Администратор: лотереи"
+        ],
+        "summary": "Delete Prize",
+        "operationId": "delete_prize_api_v1_admin_lotteries__lottery_id__prizes__prize_id__delete",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "lottery_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Lottery Id"
+            }
+          },
+          {
+            "name": "prize_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Prize Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/lotteries/{lottery_id}/tickets": {
+      "get": {
+        "tags": [
+          "Администратор: лотереи"
+        ],
+        "summary": "List Tickets",
+        "operationId": "list_tickets_api_v1_admin_lotteries__lottery_id__tickets_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "lottery_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Lottery Id"
+            }
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 320
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Search"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1,
+              "title": "Page"
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 20,
+              "title": "Page Size"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginationResponse_LotteryAdminTicketRead_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/lotteries/{lottery_id}/draw-random": {
+      "post": {
+        "tags": [
+          "Администратор: лотереи"
+        ],
+        "summary": "Draw Random",
+        "operationId": "draw_random_api_v1_admin_lotteries__lottery_id__draw_random_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "lottery_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Lottery Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/LotteryWinnerAdminRead"
+                  },
+                  "title": "Response Draw Random Api V1 Admin Lotteries  Lottery Id  Draw Random Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/lotteries/{lottery_id}/winners/manual": {
+      "post": {
+        "tags": [
+          "Администратор: лотереи"
+        ],
+        "summary": "Select Manual Winner",
+        "operationId": "select_manual_winner_api_v1_admin_lotteries__lottery_id__winners_manual_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "lottery_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Lottery Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LotteryManualWinnerRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LotteryWinnerAdminRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/lotteries/winners/{winner_id}": {
+      "delete": {
+        "tags": [
+          "Администратор: лотереи"
+        ],
+        "summary": "Remove Pending Winner",
+        "operationId": "remove_pending_winner_api_v1_admin_lotteries_winners__winner_id__delete",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "winner_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Winner Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/lotteries/winners/{winner_id}/confirm": {
+      "post": {
+        "tags": [
+          "Администратор: лотереи"
+        ],
+        "summary": "Confirm Winner",
+        "operationId": "confirm_winner_api_v1_admin_lotteries_winners__winner_id__confirm_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "winner_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Winner Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LotteryWinnerConfirmRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LotteryWinnerAdminRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/lotteries/{lottery_id}/winners/confirm-all": {
+      "post": {
+        "tags": [
+          "Администратор: лотереи"
+        ],
+        "summary": "Confirm All Winners",
+        "operationId": "confirm_all_winners_api_v1_admin_lotteries__lottery_id__winners_confirm_all_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "lottery_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Lottery Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/LotteryWinnerAdminRead"
+                  },
+                  "title": "Response Confirm All Winners Api V1 Admin Lotteries  Lottery Id  Winners Confirm All Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/admin/support/tickets": {
       "get": {
         "tags": [
@@ -3280,7 +4947,7 @@
             ],
             "title": "Actual Amount"
           },
-          "binance_deposit_id": {
+          "deposit_event_id": {
             "anyOf": [
               {
                 "type": "string"
@@ -3289,9 +4956,9 @@
                 "type": "null"
               }
             ],
-            "title": "Binance Deposit Id"
+            "title": "Deposit Event Id"
           },
-          "binance_txid": {
+          "deposit_txid": {
             "anyOf": [
               {
                 "type": "string"
@@ -3300,9 +4967,9 @@
                 "type": "null"
               }
             ],
-            "title": "Binance Txid"
+            "title": "Deposit Txid"
           },
-          "binance_address": {
+          "deposit_address": {
             "anyOf": [
               {
                 "type": "string"
@@ -3311,9 +4978,9 @@
                 "type": "null"
               }
             ],
-            "title": "Binance Address"
+            "title": "Deposit Address"
           },
-          "binance_network": {
+          "deposit_network": {
             "anyOf": [
               {
                 "type": "string"
@@ -3322,19 +4989,19 @@
                 "type": "null"
               }
             ],
-            "title": "Binance Network"
+            "title": "Deposit Network"
           },
-          "binance_status": {
+          "deposit_status": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/BinanceDepositStatus"
+                "$ref": "#/components/schemas/BlockchainDepositStatus"
               },
               {
                 "type": "null"
               }
             ]
           },
-          "binance_detected_at": {
+          "deposit_detected_at": {
             "anyOf": [
               {
                 "type": "string",
@@ -3344,9 +5011,9 @@
                 "type": "null"
               }
             ],
-            "title": "Binance Detected At"
+            "title": "Deposit Detected At"
           },
-          "binance_raw_data": {
+          "deposit_raw_data": {
             "anyOf": [
               {
                 "additionalProperties": true,
@@ -3356,7 +5023,7 @@
                 "type": "null"
               }
             ],
-            "title": "Binance Raw Data"
+            "title": "Deposit Raw Data"
           },
           "txid_already_used": {
             "type": "boolean",
@@ -3405,6 +5072,34 @@
             "format": "email",
             "title": "Email"
           },
+          "pending_email": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "email"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pending Email"
+          },
+          "email_verified_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email Verified At"
+          },
+          "email_verified": {
+            "type": "boolean",
+            "title": "Email Verified"
+          },
           "role": {
             "$ref": "#/components/schemas/UserRole"
           },
@@ -3415,6 +5110,22 @@
           "is_frozen": {
             "type": "boolean",
             "title": "Is Frozen"
+          },
+          "referral_code": {
+            "type": "string",
+            "title": "Referral Code"
+          },
+          "referred_by_user_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Referred By User Id"
           },
           "created_at": {
             "type": "string",
@@ -3444,9 +5155,14 @@
         "required": [
           "id",
           "email",
+          "pending_email",
+          "email_verified_at",
+          "email_verified",
           "role",
           "is_active",
           "is_frozen",
+          "referral_code",
+          "referred_by_user_id",
           "created_at",
           "updated_at",
           "available_balance",
@@ -3785,7 +5501,7 @@
         ],
         "title": "BalanceAdjustmentRequest"
       },
-      "BinanceDepositStatus": {
+      "BlockchainDepositStatus": {
         "type": "string",
         "enum": [
           "pending",
@@ -3796,7 +5512,7 @@
           "waiting_confirmation",
           "unknown"
         ],
-        "title": "BinanceDepositStatus"
+        "title": "BlockchainDepositStatus"
       },
       "Body_add_attachments_api_v1_support_messages__message_id__attachments_post": {
         "properties": {
@@ -3821,6 +5537,18 @@
           "amount": {
             "type": "string",
             "title": "Amount"
+          },
+          "deposit_wallet_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deposit Wallet Id"
           }
         },
         "additionalProperties": false,
@@ -3836,6 +5564,22 @@
             "type": "string",
             "format": "uuid",
             "title": "Id"
+          },
+          "deposit_wallet_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deposit Wallet Id"
+          },
+          "wallet_name": {
+            "type": "string",
+            "title": "Wallet Name"
           },
           "asset": {
             "type": "string",
@@ -3900,7 +5644,7 @@
           "warning": {
             "type": "string",
             "title": "Warning",
-            "default": "Отправьте точную сумму через сеть TRON (TRC20). Проверьте, сколько получит адрес после комиссии биржи. Перевод через другую сеть может быть потерян."
+            "default": "Переведите точную сумму на указанный адрес в выбранной сети. Сумма, которая поступит после комиссии отправителя, должна совпасть полностью."
           },
           "created_at": {
             "type": "string",
@@ -3912,6 +5656,8 @@
         "type": "object",
         "required": [
           "id",
+          "deposit_wallet_id",
+          "wallet_name",
           "asset",
           "network",
           "address",
@@ -3939,6 +5685,510 @@
         ],
         "title": "DepositInvoiceStatus"
       },
+      "DepositWalletCreate": {
+        "properties": {
+          "title": {
+            "type": "string",
+            "maxLength": 120,
+            "minLength": 2,
+            "title": "Title"
+          },
+          "address": {
+            "type": "string",
+            "title": "Address"
+          },
+          "asset": {
+            "type": "string",
+            "maxLength": 16,
+            "minLength": 2,
+            "title": "Asset",
+            "default": "USDT"
+          },
+          "network": {
+            "type": "string",
+            "maxLength": 64,
+            "minLength": 2,
+            "title": "Network",
+            "default": "ETHEREUM"
+          },
+          "network_display_name": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 2,
+            "title": "Network Display Name",
+            "default": "Ethereum (ERC-20)"
+          },
+          "provider": {
+            "type": "string",
+            "maxLength": 40,
+            "minLength": 2,
+            "title": "Provider",
+            "default": "infura"
+          },
+          "provider_network": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 80
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provider Network",
+            "default": "mainnet"
+          },
+          "chain_id": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Chain Id",
+            "default": 1
+          },
+          "token_standard": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 32
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Token Standard",
+            "default": "ERC20"
+          },
+          "token_contract_address": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 256
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Token Contract Address",
+            "default": "0xdac17f958d2ee523a2206206994597c13d831ec7"
+          },
+          "token_decimals": {
+            "type": "integer",
+            "maximum": 18.0,
+            "minimum": 0.0,
+            "title": "Token Decimals",
+            "default": 6
+          },
+          "confirmations_required": {
+            "type": "integer",
+            "maximum": 10000.0,
+            "minimum": 0.0,
+            "title": "Confirmations Required",
+            "default": 12
+          },
+          "monitoring_enabled": {
+            "type": "boolean",
+            "title": "Monitoring Enabled",
+            "default": true
+          },
+          "sort_order": {
+            "type": "integer",
+            "maximum": 10000.0,
+            "minimum": 0.0,
+            "title": "Sort Order",
+            "default": 0
+          },
+          "is_active": {
+            "type": "boolean",
+            "title": "Is Active",
+            "default": true
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "title",
+          "address"
+        ],
+        "title": "DepositWalletCreate"
+      },
+      "DepositWalletPublicRead": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "address": {
+            "type": "string",
+            "title": "Address"
+          },
+          "asset": {
+            "type": "string",
+            "title": "Asset"
+          },
+          "network": {
+            "type": "string",
+            "title": "Network"
+          },
+          "network_display_name": {
+            "type": "string",
+            "title": "Network Display Name"
+          },
+          "sort_order": {
+            "type": "integer",
+            "title": "Sort Order"
+          },
+          "is_active": {
+            "type": "boolean",
+            "title": "Is Active"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "address",
+          "asset",
+          "network",
+          "network_display_name",
+          "sort_order",
+          "is_active"
+        ],
+        "title": "DepositWalletPublicRead"
+      },
+      "DepositWalletRead": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "address": {
+            "type": "string",
+            "title": "Address"
+          },
+          "asset": {
+            "type": "string",
+            "title": "Asset"
+          },
+          "network": {
+            "type": "string",
+            "title": "Network"
+          },
+          "network_display_name": {
+            "type": "string",
+            "title": "Network Display Name"
+          },
+          "sort_order": {
+            "type": "integer",
+            "title": "Sort Order"
+          },
+          "is_active": {
+            "type": "boolean",
+            "title": "Is Active"
+          },
+          "provider": {
+            "type": "string",
+            "title": "Provider"
+          },
+          "provider_network": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provider Network"
+          },
+          "chain_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Chain Id"
+          },
+          "token_standard": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Token Standard"
+          },
+          "token_contract_address": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Token Contract Address"
+          },
+          "token_decimals": {
+            "type": "integer",
+            "title": "Token Decimals"
+          },
+          "confirmations_required": {
+            "type": "integer",
+            "title": "Confirmations Required"
+          },
+          "monitoring_enabled": {
+            "type": "boolean",
+            "title": "Monitoring Enabled"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "address",
+          "asset",
+          "network",
+          "network_display_name",
+          "sort_order",
+          "is_active",
+          "provider",
+          "provider_network",
+          "chain_id",
+          "token_standard",
+          "token_contract_address",
+          "token_decimals",
+          "confirmations_required",
+          "monitoring_enabled",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "DepositWalletRead"
+      },
+      "DepositWalletUpdate": {
+        "properties": {
+          "title": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 120,
+                "minLength": 2
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "address": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Address"
+          },
+          "asset": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 16,
+                "minLength": 2
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Asset"
+          },
+          "network": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 64,
+                "minLength": 2
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Network"
+          },
+          "network_display_name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 100,
+                "minLength": 2
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Network Display Name"
+          },
+          "provider": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 40,
+                "minLength": 2
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provider"
+          },
+          "provider_network": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 80
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provider Network"
+          },
+          "chain_id": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Chain Id"
+          },
+          "token_standard": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 32
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Token Standard"
+          },
+          "token_contract_address": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 256
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Token Contract Address"
+          },
+          "token_decimals": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 18.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Token Decimals"
+          },
+          "confirmations_required": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 10000.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confirmations Required"
+          },
+          "monitoring_enabled": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Monitoring Enabled"
+          },
+          "sort_order": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 10000.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sort Order"
+          },
+          "is_active": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Is Active"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "DepositWalletUpdate"
+      },
       "DurationUnit": {
         "type": "string",
         "enum": [
@@ -3948,6 +6198,63 @@
           "year"
         ],
         "title": "DurationUnit"
+      },
+      "EmailVerificationConfirmRequest": {
+        "properties": {
+          "token": {
+            "type": "string",
+            "maxLength": 512,
+            "minLength": 32,
+            "title": "Token"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "token"
+        ],
+        "title": "EmailVerificationConfirmRequest"
+      },
+      "EmailVerificationResendRequest": {
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "title": "Email"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "email"
+        ],
+        "title": "EmailVerificationResendRequest"
+      },
+      "EmailVerificationResponse": {
+        "properties": {
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "email": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "email"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "message"
+        ],
+        "title": "EmailVerificationResponse"
       },
       "HTTPValidationError": {
         "properties": {
@@ -3999,6 +6306,1476 @@
         ],
         "title": "LogoutRequest",
         "description": "Тело запроса на отзыв refresh token."
+      },
+      "LotteryAdminRead": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "cover_image_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cover Image Url"
+          },
+          "status": {
+            "$ref": "#/components/schemas/LotteryStatus"
+          },
+          "ticket_price": {
+            "type": "string",
+            "title": "Ticket Price"
+          },
+          "asset": {
+            "type": "string",
+            "title": "Asset",
+            "default": "USDT"
+          },
+          "sales_start_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Sales Start At"
+          },
+          "sales_end_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Sales End At"
+          },
+          "draw_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Draw At"
+          },
+          "sales_open": {
+            "type": "boolean",
+            "title": "Sales Open"
+          },
+          "max_tickets_total": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Tickets Total"
+          },
+          "max_tickets_per_user": {
+            "type": "integer",
+            "title": "Max Tickets Per User"
+          },
+          "tickets_sold": {
+            "type": "integer",
+            "title": "Tickets Sold"
+          },
+          "confirmed_winners_count": {
+            "type": "integer",
+            "title": "Confirmed Winners Count"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          },
+          "manager_telegram": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Manager Telegram"
+          },
+          "rules_text": {
+            "type": "string",
+            "title": "Rules Text"
+          },
+          "rules_version": {
+            "type": "string",
+            "title": "Rules Version"
+          },
+          "prizes": {
+            "items": {
+              "$ref": "#/components/schemas/LotteryPrizeRead"
+            },
+            "type": "array",
+            "title": "Prizes"
+          },
+          "winners": {
+            "items": {
+              "$ref": "#/components/schemas/LotteryWinnerPublicRead"
+            },
+            "type": "array",
+            "title": "Winners"
+          },
+          "created_by_user_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Created By User Id"
+          },
+          "published_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Published At"
+          },
+          "completed_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completed At"
+          },
+          "pending_winners_count": {
+            "type": "integer",
+            "title": "Pending Winners Count"
+          },
+          "admin_winners": {
+            "items": {
+              "$ref": "#/components/schemas/LotteryWinnerAdminRead"
+            },
+            "type": "array",
+            "title": "Admin Winners"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "description",
+          "cover_image_url",
+          "status",
+          "ticket_price",
+          "sales_start_at",
+          "sales_end_at",
+          "draw_at",
+          "sales_open",
+          "max_tickets_total",
+          "max_tickets_per_user",
+          "tickets_sold",
+          "confirmed_winners_count",
+          "created_at",
+          "updated_at",
+          "manager_telegram",
+          "rules_text",
+          "rules_version",
+          "prizes",
+          "winners",
+          "created_by_user_id",
+          "published_at",
+          "completed_at",
+          "pending_winners_count",
+          "admin_winners"
+        ],
+        "title": "LotteryAdminRead"
+      },
+      "LotteryAdminTicketRead": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "user_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "User Id"
+          },
+          "user_email": {
+            "type": "string",
+            "title": "User Email"
+          },
+          "ticket_code": {
+            "type": "string",
+            "title": "Ticket Code"
+          },
+          "status": {
+            "$ref": "#/components/schemas/LotteryTicketStatus"
+          },
+          "purchased_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Purchased At"
+          },
+          "is_winner": {
+            "type": "boolean",
+            "title": "Is Winner"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "user_id",
+          "user_email",
+          "ticket_code",
+          "status",
+          "purchased_at",
+          "is_winner"
+        ],
+        "title": "LotteryAdminTicketRead"
+      },
+      "LotteryCreate": {
+        "properties": {
+          "title": {
+            "type": "string",
+            "maxLength": 250,
+            "minLength": 3,
+            "title": "Title"
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 30000,
+            "minLength": 10,
+            "title": "Description"
+          },
+          "cover_image_url": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 1000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cover Image Url"
+          },
+          "ticket_price": {
+            "type": "string",
+            "title": "Ticket Price"
+          },
+          "sales_start_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Sales Start At"
+          },
+          "sales_end_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Sales End At"
+          },
+          "draw_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Draw At"
+          },
+          "max_tickets_total": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 10000000.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Tickets Total"
+          },
+          "max_tickets_per_user": {
+            "type": "integer",
+            "maximum": 10000.0,
+            "minimum": 1.0,
+            "title": "Max Tickets Per User",
+            "default": 20
+          },
+          "manager_telegram": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 120
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Manager Telegram"
+          },
+          "rules_text": {
+            "type": "string",
+            "maxLength": 50000,
+            "minLength": 20,
+            "title": "Rules Text"
+          },
+          "rules_version": {
+            "type": "string",
+            "maxLength": 40,
+            "minLength": 1,
+            "title": "Rules Version",
+            "default": "1.0"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "title",
+          "description",
+          "ticket_price",
+          "sales_start_at",
+          "sales_end_at",
+          "draw_at",
+          "rules_text"
+        ],
+        "title": "LotteryCreate"
+      },
+      "LotteryDetailRead": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "cover_image_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cover Image Url"
+          },
+          "status": {
+            "$ref": "#/components/schemas/LotteryStatus"
+          },
+          "ticket_price": {
+            "type": "string",
+            "title": "Ticket Price"
+          },
+          "asset": {
+            "type": "string",
+            "title": "Asset",
+            "default": "USDT"
+          },
+          "sales_start_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Sales Start At"
+          },
+          "sales_end_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Sales End At"
+          },
+          "draw_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Draw At"
+          },
+          "sales_open": {
+            "type": "boolean",
+            "title": "Sales Open"
+          },
+          "max_tickets_total": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Tickets Total"
+          },
+          "max_tickets_per_user": {
+            "type": "integer",
+            "title": "Max Tickets Per User"
+          },
+          "tickets_sold": {
+            "type": "integer",
+            "title": "Tickets Sold"
+          },
+          "confirmed_winners_count": {
+            "type": "integer",
+            "title": "Confirmed Winners Count"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          },
+          "manager_telegram": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Manager Telegram"
+          },
+          "rules_text": {
+            "type": "string",
+            "title": "Rules Text"
+          },
+          "rules_version": {
+            "type": "string",
+            "title": "Rules Version"
+          },
+          "prizes": {
+            "items": {
+              "$ref": "#/components/schemas/LotteryPrizeRead"
+            },
+            "type": "array",
+            "title": "Prizes"
+          },
+          "winners": {
+            "items": {
+              "$ref": "#/components/schemas/LotteryWinnerPublicRead"
+            },
+            "type": "array",
+            "title": "Winners"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "description",
+          "cover_image_url",
+          "status",
+          "ticket_price",
+          "sales_start_at",
+          "sales_end_at",
+          "draw_at",
+          "sales_open",
+          "max_tickets_total",
+          "max_tickets_per_user",
+          "tickets_sold",
+          "confirmed_winners_count",
+          "created_at",
+          "updated_at",
+          "manager_telegram",
+          "rules_text",
+          "rules_version",
+          "prizes",
+          "winners"
+        ],
+        "title": "LotteryDetailRead"
+      },
+      "LotteryManualWinnerRequest": {
+        "properties": {
+          "prize_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Prize Id"
+          },
+          "ticket_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Ticket Id"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "prize_id",
+          "ticket_id"
+        ],
+        "title": "LotteryManualWinnerRequest"
+      },
+      "LotteryPrizeCreate": {
+        "properties": {
+          "title": {
+            "type": "string",
+            "maxLength": 250,
+            "minLength": 2,
+            "title": "Title"
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 5000,
+            "title": "Description",
+            "default": ""
+          },
+          "prize_type": {
+            "$ref": "#/components/schemas/LotteryPrizeType"
+          },
+          "amount": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amount"
+          },
+          "quantity": {
+            "type": "integer",
+            "maximum": 1000.0,
+            "minimum": 1.0,
+            "title": "Quantity",
+            "default": 1
+          },
+          "sort_order": {
+            "type": "integer",
+            "maximum": 100000.0,
+            "minimum": 0.0,
+            "title": "Sort Order",
+            "default": 0
+          },
+          "image_url": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 1000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Image Url"
+          },
+          "manager_telegram": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 120
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Manager Telegram"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "title",
+          "prize_type"
+        ],
+        "title": "LotteryPrizeCreate"
+      },
+      "LotteryPrizeRead": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "prize_type": {
+            "$ref": "#/components/schemas/LotteryPrizeType"
+          },
+          "amount": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amount"
+          },
+          "asset": {
+            "type": "string",
+            "title": "Asset",
+            "default": "USDT"
+          },
+          "quantity": {
+            "type": "integer",
+            "title": "Quantity"
+          },
+          "sort_order": {
+            "type": "integer",
+            "title": "Sort Order"
+          },
+          "image_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Image Url"
+          },
+          "manager_telegram": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Manager Telegram"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "description",
+          "prize_type",
+          "amount",
+          "quantity",
+          "sort_order",
+          "image_url",
+          "manager_telegram",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "LotteryPrizeRead"
+      },
+      "LotteryPrizeType": {
+        "type": "string",
+        "enum": [
+          "balance",
+          "physical"
+        ],
+        "title": "LotteryPrizeType"
+      },
+      "LotteryPrizeUpdate": {
+        "properties": {
+          "title": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 250,
+                "minLength": 2
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 5000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "prize_type": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LotteryPrizeType"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "amount": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amount"
+          },
+          "quantity": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 1000.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quantity"
+          },
+          "sort_order": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 100000.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sort Order"
+          },
+          "image_url": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 1000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Image Url"
+          },
+          "manager_telegram": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 120
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Manager Telegram"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "LotteryPrizeUpdate"
+      },
+      "LotteryPurchaseRead": {
+        "properties": {
+          "purchase_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Purchase Id"
+          },
+          "lottery_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Lottery Id"
+          },
+          "quantity": {
+            "type": "integer",
+            "title": "Quantity"
+          },
+          "total_amount": {
+            "type": "string",
+            "title": "Total Amount"
+          },
+          "asset": {
+            "type": "string",
+            "title": "Asset",
+            "default": "USDT"
+          },
+          "tickets": {
+            "items": {
+              "$ref": "#/components/schemas/LotteryTicketRead"
+            },
+            "type": "array",
+            "title": "Tickets"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "purchase_id",
+          "lottery_id",
+          "quantity",
+          "total_amount",
+          "tickets",
+          "created_at"
+        ],
+        "title": "LotteryPurchaseRead"
+      },
+      "LotteryStatus": {
+        "type": "string",
+        "enum": [
+          "draft",
+          "published",
+          "awaiting_confirmation",
+          "completed",
+          "cancelled"
+        ],
+        "title": "LotteryStatus"
+      },
+      "LotterySummaryRead": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "cover_image_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cover Image Url"
+          },
+          "status": {
+            "$ref": "#/components/schemas/LotteryStatus"
+          },
+          "ticket_price": {
+            "type": "string",
+            "title": "Ticket Price"
+          },
+          "asset": {
+            "type": "string",
+            "title": "Asset",
+            "default": "USDT"
+          },
+          "sales_start_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Sales Start At"
+          },
+          "sales_end_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Sales End At"
+          },
+          "draw_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Draw At"
+          },
+          "sales_open": {
+            "type": "boolean",
+            "title": "Sales Open"
+          },
+          "max_tickets_total": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Tickets Total"
+          },
+          "max_tickets_per_user": {
+            "type": "integer",
+            "title": "Max Tickets Per User"
+          },
+          "tickets_sold": {
+            "type": "integer",
+            "title": "Tickets Sold"
+          },
+          "confirmed_winners_count": {
+            "type": "integer",
+            "title": "Confirmed Winners Count"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "description",
+          "cover_image_url",
+          "status",
+          "ticket_price",
+          "sales_start_at",
+          "sales_end_at",
+          "draw_at",
+          "sales_open",
+          "max_tickets_total",
+          "max_tickets_per_user",
+          "tickets_sold",
+          "confirmed_winners_count",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "LotterySummaryRead"
+      },
+      "LotteryTicketPurchaseRequest": {
+        "properties": {
+          "quantity": {
+            "type": "integer",
+            "maximum": 100.0,
+            "minimum": 1.0,
+            "title": "Quantity",
+            "default": 1
+          },
+          "accept_rules": {
+            "type": "boolean",
+            "const": true,
+            "title": "Accept Rules"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "accept_rules"
+        ],
+        "title": "LotteryTicketPurchaseRequest"
+      },
+      "LotteryTicketRead": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "lottery_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Lottery Id"
+          },
+          "lottery_title": {
+            "type": "string",
+            "title": "Lottery Title"
+          },
+          "ticket_code": {
+            "type": "string",
+            "title": "Ticket Code"
+          },
+          "price": {
+            "type": "string",
+            "title": "Price"
+          },
+          "asset": {
+            "type": "string",
+            "title": "Asset",
+            "default": "USDT"
+          },
+          "status": {
+            "$ref": "#/components/schemas/LotteryTicketStatus"
+          },
+          "purchased_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Purchased At"
+          },
+          "draw_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Draw At"
+          },
+          "winner_status": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LotteryWinnerStatus"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "prize_title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Prize Title"
+          },
+          "prize_type": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LotteryPrizeType"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "prize_amount": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Prize Amount"
+          },
+          "claim_contact": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Claim Contact"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "lottery_id",
+          "lottery_title",
+          "ticket_code",
+          "price",
+          "status",
+          "purchased_at",
+          "draw_at",
+          "winner_status",
+          "prize_title",
+          "prize_type",
+          "prize_amount",
+          "claim_contact"
+        ],
+        "title": "LotteryTicketRead"
+      },
+      "LotteryTicketStatus": {
+        "type": "string",
+        "enum": [
+          "active",
+          "refunded"
+        ],
+        "title": "LotteryTicketStatus"
+      },
+      "LotteryUpdate": {
+        "properties": {
+          "title": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 250,
+                "minLength": 3
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 30000,
+                "minLength": 10
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "cover_image_url": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 1000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cover Image Url"
+          },
+          "ticket_price": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ticket Price"
+          },
+          "sales_start_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sales Start At"
+          },
+          "sales_end_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sales End At"
+          },
+          "draw_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Draw At"
+          },
+          "max_tickets_total": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 10000000.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Tickets Total"
+          },
+          "max_tickets_per_user": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 10000.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Tickets Per User"
+          },
+          "manager_telegram": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 120
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Manager Telegram"
+          },
+          "rules_text": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 50000,
+                "minLength": 20
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rules Text"
+          },
+          "rules_version": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 40,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rules Version"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "LotteryUpdate"
+      },
+      "LotteryWinnerAdminRead": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "lottery_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Lottery Id"
+          },
+          "prize_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Prize Id"
+          },
+          "prize_title": {
+            "type": "string",
+            "title": "Prize Title"
+          },
+          "prize_type": {
+            "$ref": "#/components/schemas/LotteryPrizeType"
+          },
+          "prize_amount": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Prize Amount"
+          },
+          "ticket_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Ticket Id"
+          },
+          "ticket_code": {
+            "type": "string",
+            "title": "Ticket Code"
+          },
+          "user_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "User Id"
+          },
+          "user_email": {
+            "type": "string",
+            "title": "User Email"
+          },
+          "selection_method": {
+            "$ref": "#/components/schemas/LotteryWinnerSelectionMethod"
+          },
+          "status": {
+            "$ref": "#/components/schemas/LotteryWinnerStatus"
+          },
+          "selected_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Selected At"
+          },
+          "confirmed_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confirmed At"
+          },
+          "claim_contact": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Claim Contact"
+          },
+          "confirmation_note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confirmation Note"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "lottery_id",
+          "prize_id",
+          "prize_title",
+          "prize_type",
+          "prize_amount",
+          "ticket_id",
+          "ticket_code",
+          "user_id",
+          "user_email",
+          "selection_method",
+          "status",
+          "selected_at",
+          "confirmed_at",
+          "claim_contact",
+          "confirmation_note"
+        ],
+        "title": "LotteryWinnerAdminRead"
+      },
+      "LotteryWinnerConfirmRequest": {
+        "properties": {
+          "note": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 2000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "LotteryWinnerConfirmRequest"
+      },
+      "LotteryWinnerPublicRead": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "prize_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Prize Id"
+          },
+          "prize_title": {
+            "type": "string",
+            "title": "Prize Title"
+          },
+          "ticket_code": {
+            "type": "string",
+            "title": "Ticket Code"
+          },
+          "winner_email_masked": {
+            "type": "string",
+            "title": "Winner Email Masked"
+          },
+          "confirmed_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Confirmed At"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "prize_id",
+          "prize_title",
+          "ticket_code",
+          "winner_email_masked",
+          "confirmed_at"
+        ],
+        "title": "LotteryWinnerPublicRead"
+      },
+      "LotteryWinnerSelectionMethod": {
+        "type": "string",
+        "enum": [
+          "random",
+          "manual"
+        ],
+        "title": "LotteryWinnerSelectionMethod"
+      },
+      "LotteryWinnerStatus": {
+        "type": "string",
+        "enum": [
+          "pending",
+          "confirmed",
+          "cancelled"
+        ],
+        "title": "LotteryWinnerStatus"
       },
       "MessageCreate": {
         "properties": {
@@ -4097,6 +7874,93 @@
           "message"
         ],
         "title": "MessageResponse"
+      },
+      "NotificationCount": {
+        "properties": {
+          "unread_count": {
+            "type": "integer",
+            "title": "Unread Count"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "unread_count"
+        ],
+        "title": "NotificationCount"
+      },
+      "NotificationRead": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "notification_type": {
+            "$ref": "#/components/schemas/NotificationType"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "action_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Action Url"
+          },
+          "is_read": {
+            "type": "boolean",
+            "title": "Is Read"
+          },
+          "read_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Read At"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "notification_type",
+          "title",
+          "message",
+          "action_url",
+          "is_read",
+          "read_at",
+          "created_at"
+        ],
+        "title": "NotificationRead"
+      },
+      "NotificationType": {
+        "type": "string",
+        "enum": [
+          "lottery_win",
+          "system"
+        ],
+        "title": "NotificationType"
       },
       "PaginationResponse_AdminTicketRead_": {
         "properties": {
@@ -4257,6 +8121,166 @@
           "total"
         ],
         "title": "PaginationResponse[DepositInvoiceRead]"
+      },
+      "PaginationResponse_DepositWalletRead_": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/DepositWalletRead"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "page": {
+            "type": "integer",
+            "title": "Page"
+          },
+          "page_size": {
+            "type": "integer",
+            "title": "Page Size"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "items",
+          "page",
+          "page_size",
+          "total"
+        ],
+        "title": "PaginationResponse[DepositWalletRead]"
+      },
+      "PaginationResponse_LotteryAdminTicketRead_": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/LotteryAdminTicketRead"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "page": {
+            "type": "integer",
+            "title": "Page"
+          },
+          "page_size": {
+            "type": "integer",
+            "title": "Page Size"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "items",
+          "page",
+          "page_size",
+          "total"
+        ],
+        "title": "PaginationResponse[LotteryAdminTicketRead]"
+      },
+      "PaginationResponse_LotterySummaryRead_": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/LotterySummaryRead"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "page": {
+            "type": "integer",
+            "title": "Page"
+          },
+          "page_size": {
+            "type": "integer",
+            "title": "Page Size"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "items",
+          "page",
+          "page_size",
+          "total"
+        ],
+        "title": "PaginationResponse[LotterySummaryRead]"
+      },
+      "PaginationResponse_LotteryTicketRead_": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/LotteryTicketRead"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "page": {
+            "type": "integer",
+            "title": "Page"
+          },
+          "page_size": {
+            "type": "integer",
+            "title": "Page Size"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "items",
+          "page",
+          "page_size",
+          "total"
+        ],
+        "title": "PaginationResponse[LotteryTicketRead]"
+      },
+      "PaginationResponse_NotificationRead_": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/NotificationRead"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "page": {
+            "type": "integer",
+            "title": "Page"
+          },
+          "page_size": {
+            "type": "integer",
+            "title": "Page Size"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "items",
+          "page",
+          "page_size",
+          "total"
+        ],
+        "title": "PaginationResponse[NotificationRead]"
       },
       "PaginationResponse_PlanRead_": {
         "properties": {
@@ -4482,13 +8506,43 @@
         ],
         "title": "PaginationResponse[WithdrawalRead]"
       },
-      "PlanCategory": {
-        "type": "string",
-        "enum": [
-          "game",
-          "application"
+      "PasswordResetConfirmRequest": {
+        "properties": {
+          "token": {
+            "type": "string",
+            "maxLength": 512,
+            "minLength": 32,
+            "title": "Token"
+          },
+          "new_password": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 8,
+            "title": "New Password"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "token",
+          "new_password"
         ],
-        "title": "PlanCategory"
+        "title": "PasswordResetConfirmRequest"
+      },
+      "PasswordResetRequest": {
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "title": "Email"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "email"
+        ],
+        "title": "PasswordResetRequest"
       },
       "PlanCreate": {
         "properties": {
@@ -4498,14 +8552,8 @@
             "minLength": 1,
             "title": "Title"
           },
-          "slug": {
-            "type": "string",
-            "maxLength": 200,
-            "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
-            "title": "Slug"
-          },
-          "category": {
-            "$ref": "#/components/schemas/PlanCategory"
+          "tier": {
+            "$ref": "#/components/schemas/PlanTier"
           },
           "short_description": {
             "type": "string",
@@ -4569,8 +8617,7 @@
         "type": "object",
         "required": [
           "title",
-          "slug",
-          "category",
+          "tier",
           "price",
           "access_duration_value",
           "access_duration_unit",
@@ -4580,7 +8627,7 @@
           "reward_duration_unit"
         ],
         "title": "PlanCreate",
-        "description": "Полный набор полей нового тарифа."
+        "description": "Полный набор полей новой программы."
       },
       "PlanRead": {
         "properties": {
@@ -4593,12 +8640,8 @@
             "type": "string",
             "title": "Title"
           },
-          "slug": {
-            "type": "string",
-            "title": "Slug"
-          },
-          "category": {
-            "$ref": "#/components/schemas/PlanCategory"
+          "tier": {
+            "$ref": "#/components/schemas/PlanTier"
           },
           "short_description": {
             "type": "string",
@@ -4669,8 +8712,7 @@
         "required": [
           "id",
           "title",
-          "slug",
-          "category",
+          "tier",
           "short_description",
           "full_description",
           "image_url",
@@ -4687,6 +8729,15 @@
         ],
         "title": "PlanRead"
       },
+      "PlanTier": {
+        "type": "string",
+        "enum": [
+          "starter",
+          "standard",
+          "premium"
+        ],
+        "title": "PlanTier"
+      },
       "PlanUpdate": {
         "properties": {
           "title": {
@@ -4702,23 +8753,10 @@
             ],
             "title": "Title"
           },
-          "slug": {
+          "tier": {
             "anyOf": [
               {
-                "type": "string",
-                "maxLength": 200,
-                "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Slug"
-          },
-          "category": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/PlanCategory"
+                "$ref": "#/components/schemas/PlanTier"
               },
               {
                 "type": "null"
@@ -4852,9 +8890,16 @@
             "title": "Title"
           },
           "slug": {
-            "type": "string",
-            "maxLength": 250,
-            "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 250,
+                "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Slug"
           },
           "excerpt": {
@@ -4885,7 +8930,6 @@
         "type": "object",
         "required": [
           "title",
-          "slug",
           "content"
         ],
         "title": "PostCreate"
@@ -5084,6 +9128,46 @@
             "type": "string",
             "title": "Withdrawal Fee"
           },
+          "withdrawal_is_open": {
+            "type": "boolean",
+            "title": "Withdrawal Is Open"
+          },
+          "withdrawal_timezone": {
+            "type": "string",
+            "title": "Withdrawal Timezone"
+          },
+          "withdrawal_weekday_label": {
+            "type": "string",
+            "title": "Withdrawal Weekday Label"
+          },
+          "next_withdrawal_open_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Withdrawal Open At"
+          },
+          "withdrawal_processing_min_hours": {
+            "type": "integer",
+            "title": "Withdrawal Processing Min Hours"
+          },
+          "withdrawal_processing_max_days": {
+            "type": "integer",
+            "title": "Withdrawal Processing Max Days"
+          },
+          "referral_purchase_bonus_percent": {
+            "type": "integer",
+            "title": "Referral Purchase Bonus Percent"
+          },
+          "premium_referral_reward_bonus": {
+            "type": "string",
+            "title": "Premium Referral Reward Bonus"
+          },
           "support_max_file_size_mb": {
             "type": "integer",
             "title": "Support Max File Size Mb"
@@ -5104,10 +9188,100 @@
           "deposit_amount_reservation_hours",
           "min_withdrawal_amount",
           "withdrawal_fee",
+          "withdrawal_is_open",
+          "withdrawal_timezone",
+          "withdrawal_weekday_label",
+          "next_withdrawal_open_at",
+          "withdrawal_processing_min_hours",
+          "withdrawal_processing_max_days",
+          "referral_purchase_bonus_percent",
+          "premium_referral_reward_bonus",
           "support_max_file_size_mb",
           "support_max_files_per_message"
         ],
         "title": "PublicSystemConfigRead"
+      },
+      "ReferralMemberRead": {
+        "properties": {
+          "email": {
+            "type": "string",
+            "title": "Email"
+          },
+          "joined_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Joined At"
+          },
+          "has_program": {
+            "type": "boolean",
+            "title": "Has Program"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "email",
+          "joined_at",
+          "has_program"
+        ],
+        "title": "ReferralMemberRead"
+      },
+      "ReferralSummaryRead": {
+        "properties": {
+          "referral_code": {
+            "type": "string",
+            "title": "Referral Code"
+          },
+          "invited_count": {
+            "type": "integer",
+            "title": "Invited Count"
+          },
+          "active_invited_count": {
+            "type": "integer",
+            "title": "Active Invited Count"
+          },
+          "total_earned": {
+            "type": "string",
+            "title": "Total Earned"
+          },
+          "purchase_bonus_earned": {
+            "type": "string",
+            "title": "Purchase Bonus Earned"
+          },
+          "reward_bonus_earned": {
+            "type": "string",
+            "title": "Reward Bonus Earned"
+          },
+          "purchase_bonus_percent": {
+            "type": "integer",
+            "title": "Purchase Bonus Percent"
+          },
+          "premium_reward_bonus": {
+            "type": "string",
+            "title": "Premium Reward Bonus"
+          },
+          "members": {
+            "items": {
+              "$ref": "#/components/schemas/ReferralMemberRead"
+            },
+            "type": "array",
+            "title": "Members"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "referral_code",
+          "invited_count",
+          "active_invited_count",
+          "total_earned",
+          "purchase_bonus_earned",
+          "reward_bonus_earned",
+          "purchase_bonus_percent",
+          "premium_reward_bonus",
+          "members"
+        ],
+        "title": "ReferralSummaryRead"
       },
       "RefreshRequest": {
         "properties": {
@@ -5136,15 +9310,99 @@
             "maxLength": 128,
             "minLength": 8,
             "title": "Password"
+          },
+          "referral_code": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 20,
+                "minLength": 4
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Referral Code"
+          },
+          "accept_terms": {
+            "type": "boolean",
+            "const": true,
+            "title": "Accept Terms",
+            "description": "Принятие Пользовательского соглашения"
+          },
+          "accept_privacy_policy": {
+            "type": "boolean",
+            "const": true,
+            "title": "Accept Privacy Policy",
+            "description": "Ознакомление с Политикой конфиденциальности"
+          },
+          "accept_personal_data_processing": {
+            "type": "boolean",
+            "const": true,
+            "title": "Accept Personal Data Processing",
+            "description": "Согласие на обработку персональных данных"
+          },
+          "accept_program_rules": {
+            "type": "boolean",
+            "const": true,
+            "title": "Accept Program Rules",
+            "description": "Принятие правил клиентских программ и лотерей"
+          },
+          "confirm_age_18": {
+            "type": "boolean",
+            "const": true,
+            "title": "Confirm Age 18",
+            "description": "Подтверждение совершеннолетия и дееспособности"
           }
         },
         "additionalProperties": false,
         "type": "object",
         "required": [
           "email",
-          "password"
+          "password",
+          "accept_terms",
+          "accept_privacy_policy",
+          "accept_personal_data_processing",
+          "accept_program_rules",
+          "confirm_age_18"
         ],
         "title": "RegisterRequest"
+      },
+      "RegistrationResponse": {
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "title": "Email"
+          },
+          "verification_required": {
+            "type": "boolean",
+            "title": "Verification Required",
+            "default": true
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "debug_verification_token": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Debug Verification Token"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "email",
+          "message"
+        ],
+        "title": "RegistrationResponse"
       },
       "ResolveTicketDepositRequest": {
         "properties": {
@@ -5448,22 +9706,59 @@
             "format": "uuid",
             "title": "Id"
           },
-          "binance_record_id": {
+          "blockchain_record_id": {
             "type": "string",
             "format": "uuid",
-            "title": "Binance Record Id"
+            "title": "Blockchain Record Id"
           },
-          "binance_deposit_id": {
+          "event_id": {
             "type": "string",
-            "title": "Binance Deposit Id"
+            "title": "Event Id"
           },
           "txid": {
             "type": "string",
             "title": "Txid"
           },
-          "coin": {
+          "log_index": {
+            "type": "integer",
+            "title": "Log Index"
+          },
+          "block_number": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Block Number"
+          },
+          "block_hash": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Block Hash"
+          },
+          "from_address": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "From Address"
+          },
+          "asset": {
             "type": "string",
-            "title": "Coin"
+            "title": "Asset"
           },
           "amount": {
             "type": "string",
@@ -5477,8 +9772,27 @@
             "type": "string",
             "title": "Network"
           },
-          "binance_status": {
-            "$ref": "#/components/schemas/BinanceDepositStatus"
+          "provider": {
+            "type": "string",
+            "title": "Provider"
+          },
+          "token_contract_address": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Token Contract Address"
+          },
+          "deposit_status": {
+            "$ref": "#/components/schemas/BlockchainDepositStatus"
+          },
+          "confirmations": {
+            "type": "integer",
+            "title": "Confirmations"
           },
           "deposit_time": {
             "type": "string",
@@ -5553,14 +9867,21 @@
         "type": "object",
         "required": [
           "id",
-          "binance_record_id",
-          "binance_deposit_id",
+          "blockchain_record_id",
+          "event_id",
           "txid",
-          "coin",
+          "log_index",
+          "block_number",
+          "block_hash",
+          "from_address",
+          "asset",
           "amount",
           "address",
           "network",
-          "binance_status",
+          "provider",
+          "token_contract_address",
+          "deposit_status",
+          "confirmations",
           "deposit_time",
           "credited_at",
           "txid_already_used",
@@ -5605,6 +9926,34 @@
             "format": "email",
             "title": "Email"
           },
+          "pending_email": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "email"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pending Email"
+          },
+          "email_verified_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email Verified At"
+          },
+          "email_verified": {
+            "type": "boolean",
+            "title": "Email Verified"
+          },
           "role": {
             "$ref": "#/components/schemas/UserRole"
           },
@@ -5615,6 +9964,22 @@
           "is_frozen": {
             "type": "boolean",
             "title": "Is Frozen"
+          },
+          "referral_code": {
+            "type": "string",
+            "title": "Referral Code"
+          },
+          "referred_by_user_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Referred By User Id"
           },
           "created_at": {
             "type": "string",
@@ -5632,9 +9997,14 @@
         "required": [
           "id",
           "email",
+          "pending_email",
+          "email_verified_at",
+          "email_verified",
           "role",
           "is_active",
           "is_frozen",
+          "referral_code",
+          "referred_by_user_id",
           "created_at",
           "updated_at"
         ],
@@ -5663,6 +10033,9 @@
           "plan_title": {
             "type": "string",
             "title": "Plan Title"
+          },
+          "plan_tier": {
+            "$ref": "#/components/schemas/PlanTier"
           },
           "status": {
             "$ref": "#/components/schemas/UserSubscriptionStatus"
@@ -5715,6 +10088,7 @@
           "id",
           "plan_id",
           "plan_title",
+          "plan_tier",
           "status",
           "purchased_at",
           "access_started_at",
@@ -5795,8 +10169,13 @@
         "type": "string",
         "enum": [
           "deposit_credit",
-          "subscription_purchase",
+          "program_purchase",
           "reward_credit",
+          "referral_purchase_bonus",
+          "referral_reward_bonus",
+          "lottery_ticket_purchase",
+          "lottery_prize_credit",
+          "lottery_ticket_refund",
           "withdrawal_hold",
           "withdrawal_complete",
           "withdrawal_refund",

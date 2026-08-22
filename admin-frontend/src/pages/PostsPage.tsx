@@ -37,8 +37,8 @@ export function PostsPage() {
         : publishPost(post.id));
       setMessage(
         post.status === "published"
-          ? "Новость архивирована"
-          : "Новость опубликована",
+          ? "Публикация архивирована"
+          : "Публикация опубликована",
       );
       load();
     } catch (e) {
@@ -48,12 +48,12 @@ export function PostsPage() {
   return (
     <>
       <PageHeader
-        title="Новости"
-        description="Черновики, публикация и архивирование материалов компании."
+        title="Публикации"
+        description="Новости, материалы о компании и обновления клиентских программ."
         actions={
           <Link className="button button-primary" to="/posts/new">
             <Plus />
-            Создать новость
+            Создать публикацию
           </Link>
         }
       />
@@ -63,16 +63,15 @@ export function PostsPage() {
         <LoadingSpinner />
       ) : items.length === 0 ? (
         <EmptyState
-          title="Новостей нет"
+          title="Публикаций нет"
           description="Создайте первый черновик."
         />
       ) : (
         <>
-          <DataTable label="Новости">
+          <DataTable label="Публикации">
             <thead>
               <tr>
                 <th>Заголовок</th>
-                <th>Slug</th>
                 <th>Статус</th>
                 <th>Опубликовано</th>
                 <th>Изменено</th>
@@ -86,7 +85,6 @@ export function PostsPage() {
                     <strong>{p.title}</strong>
                     <small>{p.excerpt}</small>
                   </td>
-                  <td className="mono">{p.slug}</td>
                   <td>
                     <StatusBadge value={p.status} />
                   </td>

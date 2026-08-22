@@ -1,4 +1,5 @@
-import { useState, type FormEvent } from "react";
+import { MailCheck, MailWarning } from "lucide-react";
+import { useEffect, useState, type FormEvent } from "react";
 import { updateMe } from "../../api/users";
 import { useAuth } from "../../auth/AuthContext";
 import { Button } from "../../components/Button";
@@ -6,26 +7,40 @@ import { Card } from "../../components/Card";
 import { StatusBadge } from "../../components/StatusBadge";
 import { showToast } from "../../components/Toast";
 import { formatDate } from "../../utils/date";
+
 export function ProfilePage() {
   const { user, refreshUser } = useAuth();
-  const [email, setEmail] = useState(user?.email ?? "");
+  const [email, setEmail] = useState(user?.pending_email ?? user?.email ?? "");
   const [loading, setLoading] = useState(false);
-  async function submit(e: FormEvent) {
-    e.preventDefault();
+
+  useEffect(() => {
+    setEmail(user?.pending_email ?? user?.email ?? "");
+  }, [user?.email, user?.pending_email]);
+
+  async function submit(event: FormEvent) {
+    event.preventDefault();
     setLoading(true);
     try {
-      await updateMe(email);
+      const updated = await updateMe(email);
       await refreshUser();
-      showToast("Профиль обновлён", "success");
-    } catch (err) {
+      if (updated.pending_email) {
+        showToast(
+          `Письмо для подтверждения отправлено на ${updated.pending_email}`,
+          "success",
+        );
+      } else {
+        showToast("Профиль обновлён", "success");
+      }
+    } catch (error) {
       showToast(
-        err instanceof Error ? err.message : "Не удалось обновить профиль",
+        error instanceof Error ? error.message : "Не удалось обновить профиль",
         "error",
       );
     } finally {
       setLoading(false);
     }
   }
+
   return (
     <div className="account-page">
       <div className="page-title">
@@ -43,18 +58,42 @@ export function ProfilePage() {
               <input
                 type="email"
                 required
+                autoComplete="email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(event) => setEmail(event.target.value)}
               />
             </label>
+            <p className="field-hint">
+              При смене адреса мы отправим письмо. Текущий email будет действовать,
+              пока новый адрес не подтверждён.
+            </p>
             <Button type="submit" loading={loading}>
               Сохранить
             </Button>
           </form>
+          {user?.pending_email ? (
+            <div className="notice warning email-state-notice">
+              <MailWarning size={20} />
+              <div>
+                <strong>Ожидается подтверждение нового email</strong>
+                <p>{user.pending_email}</p>
+              </div>
+            </div>
+          ) : null}
         </Card>
         <Card>
           <h2>Статус аккаунта</h2>
           <dl className="compact-dl">
+            <div>
+              <dt>Email</dt>
+              <dd className="email-verification-state">
+                {user?.email_verified ? (
+                  <><MailCheck size={18} /> Подтверждён</>
+                ) : (
+                  <><MailWarning size={18} /> Не подтверждён</>
+                )}
+              </dd>
+            </div>
             <div>
               <dt>Роль</dt>
               <dd>{user?.role}</dd>

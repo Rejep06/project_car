@@ -1,6 +1,6 @@
 """Публичные новости и административное управление публикациями."""
 
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
@@ -11,6 +11,7 @@ from app.db.enums import PostStatus
 from app.db.models import Post
 from app.schemas.post import PostCreate, PostUpdate
 from app.utils.datetime import utcnow
+from app.utils.slug import make_post_slug
 
 
 class PostService:
@@ -67,19 +68,29 @@ class PostService:
 
     @staticmethod
     async def create(session: AsyncSession, *, data: PostCreate, author_id: UUID) -> Post:
-        post = Post(author_id=author_id, **data.model_dump(), status=PostStatus.DRAFT)
+        post_id = uuid4()
+        values = data.model_dump()
+        requested_slug = values.pop("slug", None)
+        slug = requested_slug or make_post_slug(data.title, post_id.hex[:8])
+        post = Post(
+            id=post_id,
+            author_id=author_id,
+            slug=slug,
+            **values,
+            status=PostStatus.DRAFT,
+        )
         session.add(post)
         try:
             await session.commit()
         except IntegrityError as exc:
             await session.rollback()
-            raise AppError("post_slug_exists", "Новость с таким slug уже существует", status_code=409) from exc
+            raise AppError("post_slug_exists", "Публикация с таким адресом уже существует", status_code=409) from exc
         await session.refresh(post)
         return post
 
     @staticmethod
     async def update(session: AsyncSession, *, post_id: UUID, data: PostUpdate) -> Post:
-        post = await session.scalar(select(Post).where(Post.id == post_id).with_for_update())
+        post = await session.scalar(select(Post).where(Post.id == post_id).with_for_update(of=Post))
         if post is None:
             raise AppError("post_not_found", "Новость не найдена", status_code=404)
         for field, value in data.model_dump(exclude_unset=True).items():
@@ -88,13 +99,13 @@ class PostService:
             await session.commit()
         except IntegrityError as exc:
             await session.rollback()
-            raise AppError("post_slug_exists", "Новость с таким slug уже существует", status_code=409) from exc
+            raise AppError("post_slug_exists", "Публикация с таким адресом уже существует", status_code=409) from exc
         await session.refresh(post)
         return post
 
     @staticmethod
     async def publish(session: AsyncSession, post_id: UUID) -> Post:
-        post = await session.scalar(select(Post).where(Post.id == post_id).with_for_update())
+        post = await session.scalar(select(Post).where(Post.id == post_id).with_for_update(of=Post))
         if post is None:
             raise AppError("post_not_found", "Новость не найдена", status_code=404)
         post.status = PostStatus.PUBLISHED
@@ -105,7 +116,7 @@ class PostService:
 
     @staticmethod
     async def archive(session: AsyncSession, post_id: UUID) -> Post:
-        post = await session.scalar(select(Post).where(Post.id == post_id).with_for_update())
+        post = await session.scalar(select(Post).where(Post.id == post_id).with_for_update(of=Post))
         if post is None:
             raise AppError("post_not_found", "Новость не найдена", status_code=404)
         post.status = PostStatus.ARCHIVED

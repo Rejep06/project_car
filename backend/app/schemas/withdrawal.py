@@ -6,7 +6,7 @@ from uuid import UUID
 from pydantic import Field, field_validator
 
 from app.db.enums import WithdrawalStatus
-from app.schemas.common import APIModel, validate_tron_address, validate_txid
+from app.schemas.common import APIModel, validate_evm_address, validate_txid
 from app.utils.money import format_amount, parse_amount
 
 
@@ -17,7 +17,7 @@ class WithdrawalCreate(APIModel):
     @field_validator("destination_address")
     @classmethod
     def validate_address(cls, value: str) -> str:
-        return validate_tron_address(value)
+        return validate_evm_address(value)
 
     @field_validator("amount")
     @classmethod

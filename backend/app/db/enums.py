@@ -10,17 +10,23 @@ class UserRole(StrEnum):
 
 class WalletOperationType(StrEnum):
     DEPOSIT_CREDIT = "deposit_credit"
-    SUBSCRIPTION_PURCHASE = "subscription_purchase"
+    PROGRAM_PURCHASE = "program_purchase"
     REWARD_CREDIT = "reward_credit"
+    REFERRAL_PURCHASE_BONUS = "referral_purchase_bonus"
+    REFERRAL_REWARD_BONUS = "referral_reward_bonus"
+    LOTTERY_TICKET_PURCHASE = "lottery_ticket_purchase"
+    LOTTERY_PRIZE_CREDIT = "lottery_prize_credit"
+    LOTTERY_TICKET_REFUND = "lottery_ticket_refund"
     WITHDRAWAL_HOLD = "withdrawal_hold"
     WITHDRAWAL_COMPLETE = "withdrawal_complete"
     WITHDRAWAL_REFUND = "withdrawal_refund"
     ADMIN_ADJUSTMENT = "admin_adjustment"
 
 
-class PlanCategory(StrEnum):
-    GAME = "game"
-    APPLICATION = "application"
+class PlanTier(StrEnum):
+    STARTER = "starter"
+    STANDARD = "standard"
+    PREMIUM = "premium"
 
 
 class DurationUnit(StrEnum):
@@ -59,7 +65,7 @@ class DepositInvoiceStatus(StrEnum):
     CANCELLED = "cancelled"
 
 
-class BinanceDepositStatus(StrEnum):
+class BlockchainDepositStatus(StrEnum):
     PENDING = "pending"
     SUCCESS = "success"
     REJECTED = "rejected"
@@ -111,3 +117,57 @@ class PostStatus(StrEnum):
     DRAFT = "draft"
     PUBLISHED = "published"
     ARCHIVED = "archived"
+
+
+class EmailVerificationPurpose(StrEnum):
+    REGISTRATION = "registration"
+    EMAIL_CHANGE = "email_change"
+
+
+class EmailOutboxStatus(StrEnum):
+    PENDING = "pending"
+    SENDING = "sending"
+    SENT = "sent"
+    FAILED = "failed"
+
+
+class LegalDocumentType(StrEnum):
+    TERMS_OF_USE = "terms_of_use"
+    PRIVACY_POLICY = "privacy_policy"
+    PERSONAL_DATA_PROCESSING = "personal_data_processing"
+    PROGRAM_RULES = "program_rules"
+    AGE_CONFIRMATION = "age_confirmation"
+
+
+class LotteryStatus(StrEnum):
+    DRAFT = "draft"
+    PUBLISHED = "published"
+    AWAITING_CONFIRMATION = "awaiting_confirmation"
+    COMPLETED = "completed"
+    CANCELLED = "cancelled"
+
+
+class LotteryPrizeType(StrEnum):
+    BALANCE = "balance"
+    PHYSICAL = "physical"
+
+
+class LotteryTicketStatus(StrEnum):
+    ACTIVE = "active"
+    REFUNDED = "refunded"
+
+
+class LotteryWinnerSelectionMethod(StrEnum):
+    RANDOM = "random"
+    MANUAL = "manual"
+
+
+class LotteryWinnerStatus(StrEnum):
+    PENDING = "pending"
+    CONFIRMED = "confirmed"
+    CANCELLED = "cancelled"
+
+
+class NotificationType(StrEnum):
+    LOTTERY_WIN = "lottery_win"
+    SYSTEM = "system"

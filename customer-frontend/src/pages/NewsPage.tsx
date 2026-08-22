@@ -29,9 +29,9 @@ export function NewsPage() {
     <section className="section page-hero">
       <div className="container">
         <div className="section-heading">
-          <p className="eyebrow">Новости</p>
+          <p className="eyebrow">Публикации</p>
           <h1>Публикации автомобильной компании</h1>
-          <p>На сайте показываются только опубликованные материалы.</p>
+          <p>Новости компании, информация об автомобильном направлении и обновления клиентских программ.</p>
         </div>
         {loading ? (
           <LoadingSpinner />
@@ -60,8 +60,8 @@ export function NewsPage() {
           </>
         ) : (
           <EmptyState
-            title="Новостей пока нет"
-            text="Опубликованные новости появятся здесь."
+            title="Публикаций пока нет"
+            text="Новости и материалы компании появятся здесь."
           />
         )}
       </div>

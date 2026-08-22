@@ -11,7 +11,7 @@ router = APIRouter(prefix="/users", tags=["Пользователи"])
 
 @router.get("/me", response_model=UserRead)
 async def get_me(current_user: CurrentUserDep) -> UserRead:
-    return UserRead.model_validate(current_user)
+    return UserRead.from_user(current_user)
 
 
 @router.patch("/me", response_model=UserRead)
@@ -23,4 +23,4 @@ async def update_me(
     user = await UserService.update_me(
         session, user_id=current_user.id, email=str(data.email)
     )
-    return UserRead.model_validate(user)
+    return UserRead.from_user(user)

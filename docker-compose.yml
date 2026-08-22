@@ -1,44 +1,79 @@
 services:
   db:
     image: postgres:16-alpine
+    restart: ${DOCKER_RESTART_POLICY:-unless-stopped}
     environment:
-      POSTGRES_DB: subscriptions
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: ${POSTGRES_DB:-subscriptions}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:
-      - "127.0.0.1:5432:5432"
+      - "${POSTGRES_BIND_HOST:-127.0.0.1}:${POSTGRES_PORT:-5432}:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d subscriptions"]
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\""
+        ]
       interval: 5s
       timeout: 5s
       retries: 10
 
   api:
     build: ./backend
+    restart: ${DOCKER_RESTART_POLICY:-unless-stopped}
     env_file: ./backend/.env
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000
     ports:
-      - "8000:8000"
+      - "${API_BIND_HOST:-127.0.0.1}:${API_PORT:-8000}:8000"
     volumes:
       - support_uploads:/app/uploads/support
+    dns:
+      - "${DOCKER_DNS_PRIMARY:-1.1.1.1}"
+      - "${DOCKER_DNS_SECONDARY:-8.8.8.8}"
     depends_on:
       db:
         condition: service_healthy
 
   deposit-worker:
     build: ./backend
+    restart: ${DOCKER_RESTART_POLICY:-unless-stopped}
     env_file: ./backend/.env
     command: python -m app.workers.deposit_worker
+    dns:
+      - "${DOCKER_DNS_PRIMARY:-1.1.1.1}"
+      - "${DOCKER_DNS_SECONDARY:-8.8.8.8}"
     depends_on:
       db:
         condition: service_healthy
 
   reward-worker:
     build: ./backend
+    restart: ${DOCKER_RESTART_POLICY:-unless-stopped}
     env_file: ./backend/.env
     command: python -m app.workers.reward_worker
+    dns:
+      - "${DOCKER_DNS_PRIMARY:-1.1.1.1}"
+      - "${DOCKER_DNS_SECONDARY:-8.8.8.8}"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  email-worker:
+    build: ./backend
+    restart: ${DOCKER_RESTART_POLICY:-unless-stopped}
+    env_file: ./backend/.env
+    command: python -m app.workers.email_worker
+    dns:
+      - "${DOCKER_DNS_PRIMARY:-1.1.1.1}"
+      - "${DOCKER_DNS_SECONDARY:-8.8.8.8}"
+    healthcheck:
+      test: ["CMD", "python", "-m", "app.workers.email_worker", "--check"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 20s
     depends_on:
       db:
         condition: service_healthy
@@ -47,10 +82,11 @@ services:
     build:
       context: ./customer-frontend
       args:
-        VITE_API_BASE_URL: http://localhost:8000/api/v1
-        VITE_APP_NAME: Automotive Club
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:8000/api/v1}
+        VITE_APP_NAME: ${VITE_APP_NAME:-Automotive Club}
+    restart: ${DOCKER_RESTART_POLICY:-unless-stopped}
     ports:
-      - "3000:80"
+      - "${CUSTOMER_FRONTEND_BIND_HOST:-127.0.0.1}:${CUSTOMER_FRONTEND_PORT:-3000}:80"
     depends_on:
       - api
 
@@ -58,10 +94,11 @@ services:
     build:
       context: ./admin-frontend
       args:
-        VITE_API_BASE_URL: http://localhost:8000/api/v1
-        VITE_ADMIN_APP_NAME: Панель управления
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:8000/api/v1}
+        VITE_ADMIN_APP_NAME: ${VITE_ADMIN_APP_NAME:-Панель управления}
+    restart: ${DOCKER_RESTART_POLICY:-unless-stopped}
     ports:
-      - "3001:80"
+      - "${ADMIN_FRONTEND_BIND_HOST:-127.0.0.1}:${ADMIN_FRONTEND_PORT:-3001}:80"
     depends_on:
       - api
 

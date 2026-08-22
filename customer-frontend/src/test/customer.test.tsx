@@ -7,7 +7,7 @@ import { App } from "../App";
 import { AuthProvider } from "../auth/AuthContext";
 import { PlanCard } from "../components/PlanCard";
 import { ToastRegion } from "../components/Toast";
-import { plan, json, user, wallet } from "./fixtures";
+import { json, lottery, plan, user, wallet } from "./fixtures";
 
 function renderApp(route: string) {
   return render(
@@ -48,19 +48,33 @@ describe("клиентский сайт", () => {
           return json({ items: [plan], page: 1, page_size: 6, total: 1 });
         if (path.includes("/posts"))
           return json({ items: [], page: 1, page_size: 3, total: 0 });
+        if (path.includes("/lotteries"))
+          return json({ items: [lottery], page: 1, page_size: 12, total: 1 });
         throw new Error(`unexpected ${path}`);
       }),
     );
     renderApp("/");
     expect(
       await screen.findByRole("heading", {
-        name: /автомобильная компания с программой/i,
+        name: /автомобильная компания с клиентскими программами/i,
       }),
     ).toBeInTheDocument();
-    expect(screen.getByText(/работаем с года/i)).toBeInTheDocument();
+    expect(screen.getByText(/с 2023 года/i)).toBeInTheDocument();
+    expect(
+      screen
+        .getByRole("img", { name: /автомобиль в современном шоуруме/i })
+        .getAttribute("src"),
+    ).toContain("hero-car-photo.jpg");
+    expect(
+      await screen.findByRole("heading", { name: "Розыгрыш автомобиля" }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Открыть лотерею" })).toHaveAttribute(
+      "href",
+      `/lotteries/${lottery.id}`,
+    );
   });
 
-  it("2. отображается список подписок", async () => {
+  it("2. отображается список программ", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(async (input: RequestInfo | URL) => {
@@ -71,7 +85,7 @@ describe("клиентский сайт", () => {
     );
     renderApp("/plans");
     expect(await screen.findByText("Программа Standard")).toBeInTheDocument();
-    expect(screen.queryByText("game")).not.toBeInTheDocument();
+    expect(screen.getByText("Стандарт")).toBeInTheDocument();
   });
 
   it("3. карточка программы показывает условия", () => {
@@ -86,8 +100,15 @@ describe("клиентский сайт", () => {
     expect(screen.getByText(/каждую неделю/i)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /подробнее/i })).toHaveAttribute(
       "href",
-      "/plans/standard",
+      `/plans/${plan.id}`,
     );
+    expect(
+      screen
+        .getByRole("img", {
+          name: /автомобиль для программы «программа standard»/i,
+        })
+        .getAttribute("src"),
+    ).toContain("program-car-photo.jpg");
   });
 
   it("4. работает регистрация с автоматическим входом", async () => {
@@ -175,20 +196,20 @@ describe("клиентский сайт", () => {
           expires_in: 900,
         });
       if (path.endsWith("/users/me")) return json(user);
-      if (path.endsWith("/plans/standard")) return json(plan);
+      if (path.endsWith(`/plans/${plan.id}`)) return json(plan);
       if (path.endsWith("/wallet")) return json(wallet(available));
       throw new Error(`unexpected ${path}`);
     });
     vi.stubGlobal("fetch", fetchMock);
-    renderApp("/plans/standard");
+    renderApp(`/plans/${plan.id}`);
     await screen.findByRole("heading", { name: "Программа Standard" });
     return fetchMock;
   }
 
-  it("7. недостаточный баланс блокирует покупку", async () => {
+  it("7. недостаточный баланс блокирует активацию", async () => {
     const fetchMock = await renderAuthenticatedPlan("50.000000");
     await userEvent.click(
-      screen.getByRole("button", { name: "Купить подписку" }),
+      screen.getByRole("button", { name: "Активировать программу" }),
     );
     expect(
       await screen.findByRole("heading", { name: "Недостаточно средств" }),
@@ -202,15 +223,15 @@ describe("клиентский сайт", () => {
     ).toBe(false);
   });
 
-  it("8. открывается подтверждение покупки при достаточном балансе", async () => {
+  it("8. открывается подтверждение активации при достаточном балансе", async () => {
     await renderAuthenticatedPlan("150.000000");
     await userEvent.click(
-      screen.getByRole("button", { name: "Купить подписку" }),
+      screen.getByRole("button", { name: "Активировать программу" }),
     );
     expect(
-      await screen.findByRole("heading", { name: "Подтверждение покупки" }),
+      await screen.findByRole("heading", { name: "Подтверждение активации" }),
     ).toBeInTheDocument();
-    expect(screen.getByText(/баланс после покупки/i)).toBeInTheDocument();
+    expect(screen.getByText(/баланс после активации/i)).toBeInTheDocument();
     expect(screen.getByText("50.000000")).toBeInTheDocument();
   });
 });

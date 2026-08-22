@@ -7,3 +7,16 @@ admin-frontend/.env
 **/.pytest_cache/
 *.log
 *.db
+.env
+# Машинно-зависимые Compose overrides. Храните в Git только *.example.yml.
+/docker-compose.local.yml
+/docker-compose.server.yml
+/docker-compose.override.yml
+/compose.override.yaml
+/backend/docker-compose.local.yml
+/backend/docker-compose.server.yml
+/backend/docker-compose.override.yml
+/backend/compose.override.yaml
+
+# Локальные окружения проверки.
+.venv*/

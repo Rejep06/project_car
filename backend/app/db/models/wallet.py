@@ -30,7 +30,7 @@ class Wallet(TimestampMixin, Base):
     available_balance_atomic: Mapped[int] = mapped_column(BigInteger, default=0, nullable=False)
     locked_balance_atomic: Mapped[int] = mapped_column(BigInteger, default=0, nullable=False)
 
-    user = relationship("User", back_populates="wallet", lazy="joined")
+    user = relationship("User", back_populates="wallet", lazy="selectin")
     transactions = relationship("WalletTransaction", back_populates="wallet", lazy="raise")
 
 
@@ -68,7 +68,7 @@ class WalletTransaction(Base):
         default=utcnow, server_default=func.now(), index=True, nullable=False
     )
 
-    wallet = relationship("Wallet", back_populates="transactions", lazy="joined")
+    wallet = relationship("Wallet", back_populates="transactions", lazy="selectin")
 
 
 @event.listens_for(WalletTransaction, "before_update")

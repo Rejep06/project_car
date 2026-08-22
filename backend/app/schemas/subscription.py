@@ -1,11 +1,16 @@
-"""Ответы по купленным подпискам и графику вознаграждений."""
+"""Ответы по активированным программам и календарю начислений."""
 
 from datetime import datetime
 from uuid import UUID
 
 from pydantic import Field
 
-from app.db.enums import RewardFrequency, RewardPayoutStatus, UserSubscriptionStatus
+from app.db.enums import (
+    PlanTier,
+    RewardFrequency,
+    RewardPayoutStatus,
+    UserSubscriptionStatus,
+)
 from app.schemas.common import APIModel
 from app.utils.money import format_amount
 
@@ -35,6 +40,7 @@ class UserSubscriptionRead(APIModel):
     id: UUID
     plan_id: UUID
     plan_title: str
+    plan_tier: PlanTier
     status: UserSubscriptionStatus
     purchased_at: datetime
     access_started_at: datetime
@@ -55,6 +61,7 @@ class UserSubscriptionRead(APIModel):
             id=getattr(subscription, "id"),
             plan_id=getattr(subscription, "plan_id"),
             plan_title=plan.title,
+            plan_tier=getattr(subscription, "plan_tier"),
             status=getattr(subscription, "status"),
             purchased_at=getattr(subscription, "purchased_at"),
             access_started_at=getattr(subscription, "access_started_at"),

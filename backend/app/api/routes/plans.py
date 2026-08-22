@@ -1,6 +1,7 @@
-"""Публичный каталог активных подписок."""
+"""Публичный каталог активных клиентских программ."""
 
 from typing import Annotated
+from uuid import UUID
 
 from fastapi import APIRouter, Depends
 
@@ -10,7 +11,7 @@ from app.schemas.plan import PlanRead
 from app.services.plan_service import PlanService
 from app.utils.pagination import PaginationParams, get_pagination
 
-router = APIRouter(prefix="/plans", tags=["Тарифы"])
+router = APIRouter(prefix="/plans", tags=["Программы"])
 
 
 @router.get("", response_model=PaginationResponse[PlanRead])
@@ -29,6 +30,6 @@ async def list_plans(
     )
 
 
-@router.get("/{slug}", response_model=PlanRead)
-async def get_plan(slug: str, session: SessionDep) -> PlanRead:
-    return PlanRead.from_plan(await PlanService.get_public_by_slug(session, slug))
+@router.get("/{plan_id}", response_model=PlanRead)
+async def get_plan(plan_id: UUID, session: SessionDep) -> PlanRead:
+    return PlanRead.from_plan(await PlanService.get_public(session, plan_id))

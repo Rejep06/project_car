@@ -160,41 +160,41 @@ export function SupportDetailsPage() {
           </dl>
         </Card>
         <Card>
-          <h2>Данные Binance</h2>
+          <h2>Данные блокчейн-перевода</h2>
           <dl className="details">
             <div>
-              <dt>Deposit ID</dt>
+              <dt>ID события</dt>
               <dd className="mono break-all">
-                {ticket.binance_deposit_id ?? "—"}
+                {ticket.deposit_event_id ?? "—"}
               </dd>
             </div>
             <div>
               <dt>TxID</dt>
-              <dd className="mono break-all">{ticket.binance_txid ?? "—"}</dd>
+              <dd className="mono break-all">{ticket.deposit_txid ?? "—"}</dd>
             </div>
             <div>
               <dt>Сеть</dt>
-              <dd>{ticket.binance_network ?? "—"}</dd>
+              <dd>{ticket.deposit_network ?? "—"}</dd>
             </div>
             <div>
               <dt>Адрес</dt>
               <dd className="mono break-all">
-                {ticket.binance_address ?? "—"}
+                {ticket.deposit_address ?? "—"}
               </dd>
             </div>
             <div>
               <dt>Статус</dt>
-              <dd>{ticket.binance_status ?? "—"}</dd>
+              <dd>{ticket.deposit_status ?? "—"}</dd>
             </div>
             <div>
               <dt>Время депозита</dt>
-              <dd>{formatDateTime(ticket.binance_detected_at)}</dd>
+              <dd>{formatDateTime(ticket.deposit_detected_at)}</dd>
             </div>
           </dl>
-          {ticket.binance_raw_data && (
+          {ticket.deposit_raw_data && (
             <details>
               <summary>Исходные нормализованные данные</summary>
-              <pre>{JSON.stringify(ticket.binance_raw_data, null, 2)}</pre>
+              <pre>{JSON.stringify(ticket.deposit_raw_data, null, 2)}</pre>
             </details>
           )}
         </Card>
@@ -265,12 +265,11 @@ export function SupportDetailsPage() {
             Изменить статус
           </Button>
         </Card>
-        {ticket.category === "deposit_problem" && ticket.binance_deposit_id && (
+        {ticket.category === "deposit_problem" && ticket.deposit_event_id && (
           <Card>
             <h2>Зачислить депозит</h2>
             <p className="muted">
-              Зачисляется фактически полученная сумма. Backend повторно
-              проверяет депозит и идемпотентность.
+              Проверьте данные платежа и зачислите фактически полученную сумму.
             </p>
             <FormField label="UUID заявки (необязательно)">
               <input
@@ -285,7 +284,7 @@ export function SupportDetailsPage() {
       <ConfirmDialog
         open={confirm}
         title="Зачислить фактическую сумму"
-        description={`Пользователь: ${ticket.user_email}. TxID: ${ticket.binance_txid ?? "—"}. Повторное нажатие не должно изменить баланс второй раз.`}
+        description={`Пользователь: ${ticket.user_email}. TxID: ${ticket.deposit_txid ?? "—"}. Проверьте сумму и реквизиты перед подтверждением.`}
         confirmLabel="Зачислить"
         loading={busy}
         onConfirm={resolve}

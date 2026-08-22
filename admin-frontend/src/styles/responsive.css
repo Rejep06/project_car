@@ -130,3 +130,48 @@
     transition-duration: 0.01ms !important;
   }
 }
+
+@media (max-width: 1180px) {
+  .admin-prize-grid {
+    grid-template-columns: 1fr;
+  }
+  .manual-winner-form {
+    grid-template-columns: 1fr 1fr;
+  }
+  .manual-winner-form .button {
+    grid-column: 1 / -1;
+    justify-self: start;
+  }
+}
+
+@media (max-width: 620px) {
+  .card-heading-row,
+  .nested-form-heading {
+    display: grid;
+  }
+  .admin-prize-card {
+    grid-template-columns: 1fr;
+  }
+  .admin-prize-card > img,
+  .admin-prize-placeholder {
+    width: 100%;
+    height: 180px;
+  }
+  .manual-winner-form {
+    grid-template-columns: 1fr;
+  }
+  .manual-winner-form .button {
+    grid-column: auto;
+    width: 100%;
+  }
+}
+
+@media (max-width: 620px) {
+  .ticket-search-form {
+    grid-template-columns: 1fr;
+  }
+  .ticket-search-form .button {
+    width: 100%;
+    margin-bottom: 0;
+  }
+}
