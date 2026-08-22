@@ -13,6 +13,7 @@ from app.core.exceptions import AppError
 from app.db.enums import BlockchainDepositStatus
 from app.integrations.infura.schemas import BlockchainTransferData
 from app.schemas.common import validate_evm_address
+import asyncio
 
 TRANSFER_EVENT_TOPIC = (
     "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef"
@@ -97,16 +98,46 @@ class InfuraEthereumClient:
             "method": method,
             "params": params,
         }
-        try:
-            response = await self.http_client.post("", json=payload)
-            response.raise_for_status()
-            body = response.json()
-        except (httpx.HTTPError, ValueError) as exc:
+
+        response = None
+
+        for attempt in range(5):
+            try:
+                response = await self.http_client.post("", json=payload)
+
+                if response.status_code == 429:
+                    retry_after = response.headers.get("Retry-After")
+
+                    if retry_after is not None:
+                        try:
+                            delay = float(retry_after)
+                        except ValueError:
+                            delay = 2 ** attempt
+                    else:
+                        delay = 2 ** attempt
+
+                    delay = max(1.0, min(delay, 15.0))
+
+                    await asyncio.sleep(delay)
+                    continue
+
+                response.raise_for_status()
+                body = response.json()
+                break
+
+            except (httpx.HTTPError, ValueError) as exc:
+                raise AppError(
+                    "infura_request_failed",
+                    "Не удалось получить данные Ethereum через Infura",
+                    status_code=502,
+                ) from exc
+        else:
             raise AppError(
-                "infura_request_failed",
-                "Не удалось получить данные Ethereum через Infura",
-                status_code=502,
-            ) from exc
+                "infura_rate_limited",
+                "Infura временно ограничил частоту запросов",
+                status_code=503,
+            )
+
         if not isinstance(body, dict):
             raise AppError(
                 "infura_invalid_response",
