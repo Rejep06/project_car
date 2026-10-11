@@ -15,7 +15,7 @@ class PublicSystemConfigRead(APIModel):
     deposit_invoice_ttl_minutes: int
     deposit_amount_reservation_hours: int
     min_withdrawal_amount: str
-    withdrawal_fee: str
+    withdrawal_fee_percent: int
     withdrawal_is_open: bool
     withdrawal_timezone: str
     withdrawal_weekday_label: str
@@ -41,7 +41,7 @@ class PublicSystemConfigRead(APIModel):
             deposit_invoice_ttl_minutes=settings.deposit_invoice_ttl_minutes,
             deposit_amount_reservation_hours=settings.deposit_amount_reservation_hours,
             min_withdrawal_amount=settings.min_withdrawal_amount,
-            withdrawal_fee=settings.withdrawal_fee,
+            withdrawal_fee_percent=settings.withdrawal_fee_percent,
             withdrawal_is_open=window.is_open,
             withdrawal_timezone=window.timezone,
             withdrawal_weekday_label=window.weekday_label,

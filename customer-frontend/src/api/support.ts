@@ -1,4 +1,5 @@
 import { apiDownload, apiRequest } from "./client";
+import { notifyUnreadChanged, SUPPORT_READ_EVENT } from "../utils/unreadEvents";
 import type {
   Attachment,
   Pagination,
@@ -25,6 +26,19 @@ export const listTickets = (page = 1, pageSize = 20) =>
   );
 export const getTicket = (id: string) =>
   apiRequest<SupportTicket>(`/support/tickets/${id}`);
+export const getUnreadSupportCount = () =>
+  apiRequest<{ unread_count: number }>("/support/unread-count");
+export async function markTicketRead(id: string, messageIds: string[]) {
+  let result = { unread_count: 0 };
+  for (let offset = 0; offset < messageIds.length; offset += 1000) {
+    result = await apiRequest<{ unread_count: number }>(`/support/tickets/${id}/read`, {
+      method: "POST",
+      body: JSON.stringify({ message_ids: messageIds.slice(offset, offset + 1000) }),
+    });
+    notifyUnreadChanged(SUPPORT_READ_EVENT);
+  }
+  return result;
+}
 export const addTicketMessage = (id: string, message: string, txid?: string) =>
   apiRequest<SupportMessage>(`/support/tickets/${id}/messages`, {
     method: "POST",

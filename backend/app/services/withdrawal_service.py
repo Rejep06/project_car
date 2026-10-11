@@ -1,5 +1,7 @@
 """Заявки на ручной вывод и перенос средств между available/locked."""
 
+from datetime import datetime, timedelta
+from hashlib import sha256
 from uuid import UUID, uuid4
 
 from sqlalchemy import func, select
@@ -12,8 +14,8 @@ from app.db.enums import WalletOperationType, WithdrawalStatus
 from app.db.models import User, WithdrawalRequest
 from app.services.audit_service import AuditService
 from app.services.wallet_service import WalletService
-from app.utils.datetime import get_withdrawal_window, utcnow
-from app.utils.money import MAX_ATOMIC, format_amount, parse_amount
+from app.utils.datetime import ensure_utc, get_withdrawal_window, utcnow
+from app.utils.money import MAX_ATOMIC, format_amount, parse_amount, percentage_fee
 
 
 class WithdrawalService:
@@ -51,7 +53,7 @@ class WithdrawalService:
                 f"Минимальная сумма вывода: {settings.min_withdrawal_amount}",
                 status_code=409,
             )
-        fee_atomic = settings.withdrawal_fee_atomic
+        fee_atomic = percentage_fee(amount_atomic, settings.withdrawal_fee_percent)
         total_atomic = amount_atomic + fee_atomic
         if total_atomic > MAX_ATOMIC:
             raise AppError(
@@ -190,6 +192,150 @@ class WithdrawalService:
         if item is None:
             raise AppError("withdrawal_not_found", "Заявка на вывод не найдена", status_code=404)
         return item
+
+    @staticmethod
+    async def update_amounts(
+        session: AsyncSession,
+        *,
+        withdrawal_id: UUID,
+        amount: str,
+        fee: str,
+        comment: str,
+        expected_updated_at: datetime,
+        idempotency_key: str,
+        admin_user_id: UUID,
+        ip_address: str | None,
+    ) -> WithdrawalRequest:
+        """Исправляет заявку вместе с балансом и неизменяемым журналом.
+
+        Незавершённая заявка удерживает total_debit_atomic, в том числе старый
+        излишек после уменьшения actual_fee. Для завершённой заявки этот
+        излишек уже возвращён: её фактическое списание равно amount + fee.
+        """
+        try:
+            item = await session.scalar(
+                select(WithdrawalRequest)
+                .where(WithdrawalRequest.id == withdrawal_id)
+                .with_for_update(of=WithdrawalRequest)
+                .execution_options(populate_existing=True)
+            )
+            if item is None:
+                raise AppError("withdrawal_not_found", "Заявка на вывод не найдена", status_code=404)
+
+            amount_atomic = parse_amount(amount)
+            fee_atomic = parse_amount(fee)
+            total_atomic = amount_atomic + fee_atomic
+            comment = comment.strip()
+            if amount_atomic <= 0 or fee_atomic < 0:
+                raise AppError("invalid_withdrawal_amounts", "Сумма должна быть положительной, комиссия — неотрицательной")
+            if total_atomic > MAX_ATOMIC:
+                raise AppError("withdrawal_amount_too_large", "Сумма вывода с комиссией превышает допустимый диапазон", status_code=409)
+            if not 3 <= len(comment) <= 1000:
+                raise AppError("invalid_adjustment_comment", "Укажите причину исправления: от 3 до 1000 символов")
+            if not idempotency_key.strip() or len(idempotency_key) > 255:
+                raise AppError("invalid_idempotency_key", "Некорректный Idempotency-Key")
+
+            request_data = {
+                "amount": format_amount(amount_atomic),
+                "fee": format_amount(fee_atomic),
+                "comment": comment,
+                "expected_updated_at": ensure_utc(expected_updated_at).isoformat(),
+                "admin_user_id": str(admin_user_id),
+            }
+            # Ограничиваем длину ключа для колонки VARCHAR(255) и отделяем
+            # корректировки от остальных денежных операций.
+            key_hash = sha256(idempotency_key.strip().encode("utf-8")).hexdigest()
+            operation_key = f"withdrawal:amounts:{item.id}:{key_hash}"
+            existing = await WalletService.find_transaction(session, operation_key)
+            if existing is not None:
+                if (
+                    existing.operation_type != WalletOperationType.ADMIN_ADJUSTMENT
+                    or existing.related_entity_type != "withdrawal_request"
+                    or existing.related_entity_id != item.id
+                    or existing.metadata_json.get("request") != request_data
+                ):
+                    raise AppError("idempotency_key_conflict", "Idempotency-Key уже использован для другого исправления", status_code=409)
+                return item
+
+            if item.status in {WithdrawalStatus.CANCELLED, WithdrawalStatus.REJECTED}:
+                raise AppError(
+                    "withdrawal_amounts_not_editable",
+                    "Нельзя изменять суммы отменённой или отклонённой заявки: средства уже возвращены",
+                    status_code=409,
+                )
+            if ensure_utc(item.updated_at) != ensure_utc(expected_updated_at):
+                raise AppError(
+                    "withdrawal_changed",
+                    "Заявка уже изменена. Обновите страницу и проверьте суммы перед сохранением",
+                    status_code=409,
+                )
+
+            old_data = {
+                "amount": format_amount(item.amount_atomic),
+                "fee": format_amount(item.fee_atomic),
+                "held_total": format_amount(item.total_debit_atomic),
+                "final_total": format_amount(item.amount_atomic + item.fee_atomic),
+                "status": item.status.value,
+                "admin_comment": item.admin_comment,
+                "updated_at": ensure_utc(item.updated_at).isoformat(),
+            }
+            if item.status == WithdrawalStatus.COMPLETED:
+                old_total = item.amount_atomic + item.fee_atomic
+                available_delta = old_total - total_atomic
+                locked_delta = 0
+            else:
+                old_total = item.total_debit_atomic
+                available_delta = old_total - total_atomic
+                locked_delta = -available_delta
+
+            transaction, _ = await WalletService.apply_change(
+                session,
+                user_id=item.user_id,
+                operation_type=WalletOperationType.ADMIN_ADJUSTMENT,
+                available_delta_atomic=available_delta,
+                locked_delta_atomic=locked_delta,
+                idempotency_key=operation_key,
+                related_entity_type="withdrawal_request",
+                related_entity_id=item.id,
+                description=f"Исправление суммы и комиссии вывода: {comment}",
+                metadata_json={
+                    "request": request_data,
+                    "old_data": old_data,
+                    "new_total": format_amount(total_atomic),
+                },
+            )
+            item.amount_atomic = amount_atomic
+            item.fee_atomic = fee_atomic
+            item.total_debit_atomic = total_atomic
+            item.admin_comment = comment
+            # Версия меняется и при корректировке с нулевым денежным эффектом.
+            item.updated_at = max(utcnow(), ensure_utc(item.updated_at) + timedelta(microseconds=1))
+            await AuditService.record(
+                session,
+                admin_user_id=admin_user_id,
+                action="withdrawal_amounts_updated",
+                entity_type="withdrawal_request",
+                entity_id=item.id,
+                old_data=old_data,
+                new_data={
+                    "amount": format_amount(amount_atomic),
+                    "fee": format_amount(fee_atomic),
+                    "held_total": format_amount(total_atomic),
+                    "final_total": format_amount(total_atomic),
+                    "status": item.status.value,
+                    "comment": comment,
+                    "available_delta": format_amount(available_delta),
+                    "locked_delta": format_amount(locked_delta),
+                    "wallet_transaction_id": str(transaction.id),
+                },
+                ip_address=ip_address,
+            )
+            await session.commit()
+            await session.refresh(item)
+            return item
+        except Exception:
+            await session.rollback()
+            raise
 
     @staticmethod
     async def approve(

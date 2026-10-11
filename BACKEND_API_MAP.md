@@ -6,13 +6,13 @@
 http://localhost:8000/api/v1
 ```
 
-Актуальный OpenAPI содержит **83 paths и 96 HTTP-операций**. Полная машинная схема находится в `BACKEND_OPENAPI.json`.
+Актуальный OpenAPI содержит **88 paths и 101 HTTP-операция**. Полная машинная схема находится в `BACKEND_OPENAPI.json`.
 
 ## Авторизация и профиль
 
 | Метод | Endpoint | Назначение |
 |---|---|---|
-| GET | `/system/config` | Публичные лимиты, окно вывода и условия реферальной программы |
+| GET | `/system/config` | Публичные лимиты, процент комиссии `withdrawal_fee_percent`, окно вывода и условия реферальной программы |
 | POST | `/auth/register` | Регистрация с обязательными юридическими согласиями и отправкой подтверждения email |
 | POST | `/auth/email-verification/confirm` | Подтвердить email по одноразовому токену |
 | POST | `/auth/email-verification/resend` | Повторно запросить письмо подтверждения |
@@ -76,7 +76,9 @@ http://localhost:8000/api/v1
 | GET | `/posts` | Опубликованные материалы |
 | GET | `/posts/{slug}` | Одна публикация |
 | POST | `/support/tickets` | Создать обращение |
-| GET | `/support/tickets` | Обращения пользователя |
+| GET | `/support/tickets` | Обращения пользователя с `unread_count` |
+| GET | `/support/unread-count` | Число непрочитанных входящих сообщений поддержки |
+| POST | `/support/tickets/{ticket_id}/read` | Прочитать перечисленные входящие `message_ids`; возвращает общий `unread_count` |
 | GET | `/support/tickets/{ticket_id}` | Детали обращения |
 | POST | `/support/tickets/{ticket_id}/messages` | Добавить сообщение |
 | POST | `/support/messages/{message_id}/attachments` | Добавить вложения |
@@ -136,6 +138,7 @@ http://localhost:8000/api/v1
 |---|---|---|
 | GET | `/admin/withdrawals` | Все заявки на вывод |
 | GET | `/admin/withdrawals/{withdrawal_id}` | Детали заявки |
+| PATCH | `/admin/withdrawals/{withdrawal_id}/amounts` | Исправить `amount`, `fee` и баланс с причиной `comment`, `expected_updated_at` и `Idempotency-Key` |
 | POST | `/admin/withdrawals/{withdrawal_id}/approve` | Подтвердить заявку |
 | POST | `/admin/withdrawals/{withdrawal_id}/reject` | Отклонить и вернуть средства |
 | POST | `/admin/withdrawals/{withdrawal_id}/mark-sent` | Сохранить TxID и фактическую комиссию |
@@ -147,6 +150,8 @@ http://localhost:8000/api/v1
 | POST | `/admin/posts/{post_id}/publish` | Опубликовать |
 | POST | `/admin/posts/{post_id}/archive` | Архивировать |
 | GET | `/admin/support/tickets` | Все обращения |
+| GET | `/admin/support/unread-count` | Число непрочитанных входящих сообщений пользователей |
+| POST | `/admin/support/tickets/{ticket_id}/read` | Прочитать перечисленные входящие `message_ids` |
 | GET | `/admin/support/tickets/{ticket_id}` | Детали обращения |
 | POST | `/admin/support/tickets/{ticket_id}/messages` | Ответить пользователю |
 | POST | `/admin/support/tickets/{ticket_id}/status` | Изменить статус |

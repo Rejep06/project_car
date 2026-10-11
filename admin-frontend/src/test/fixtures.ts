@@ -114,6 +114,7 @@ export const ticket: AdminTicket = {
   created_at: "2026-07-18T08:00:00Z",
   updated_at: "2026-07-18T08:00:00Z",
   closed_at: null,
+  unread_count: 0,
   messages: [
     {
       id: "51000000-0000-4000-8000-000000000001",
@@ -122,6 +123,7 @@ export const ticket: AdminTicket = {
       message: "Отправил другую сумму",
       txid: deposit.txid,
       created_at: "2026-07-18T08:00:00Z",
+      read_at: "2026-07-18T10:00:00Z",
       attachments: [],
     },
   ],

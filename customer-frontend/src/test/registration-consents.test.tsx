@@ -21,8 +21,8 @@ function renderRegistration() {
 
 describe("юридические согласия регистрации", () => {
   it("показывает три обязательных чекбокса и отправляет пять версий документов", async () => {
-    const fetchMock = vi.fn(
-      async (input: RequestInfo | URL, init?: RequestInit) => {
+    const fetchMock = vi.fn<typeof fetch>(
+      async (input) => {
         if (String(input).endsWith("/auth/register")) {
           return json(
             {

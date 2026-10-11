@@ -17,9 +17,12 @@ import {
 import { useEffect, useMemo, useState } from "react";
 import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
 import { getUnreadNotificationCount } from "../api/notifications";
+import { getUnreadSupportCount } from "../api/support";
 import { useAuth } from "../auth/AuthContext";
 import { brandLogoUrl } from "../config/assets";
 import { content } from "../config/content";
+import { useUnreadCount } from "../hooks/useUnreadCount";
+import { NOTIFICATIONS_READ_EVENT, SUPPORT_READ_EVENT } from "../utils/unreadEvents";
 
 const links = [
   ["/account", "Обзор", LayoutDashboard],
@@ -39,22 +42,11 @@ const links = [
 export function AccountLayout() {
   const { user, logout } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
-  const [unreadCount, setUnreadCount] = useState(0);
   const location = useLocation();
+  const notificationCount = useUnreadCount(user?.id, location.pathname, getUnreadNotificationCount, NOTIFICATIONS_READ_EVENT);
+  const supportCount = useUnreadCount(user?.id, location.pathname, getUnreadSupportCount, SUPPORT_READ_EVENT);
 
   useEffect(() => setMenuOpen(false), [location.pathname]);
-
-  useEffect(() => {
-    let active = true;
-    getUnreadNotificationCount()
-      .then((result) => {
-        if (active) setUnreadCount(result.unread_count);
-      })
-      .catch(() => undefined);
-    return () => {
-      active = false;
-    };
-  }, [location.pathname]);
 
   useEffect(() => {
     if (!menuOpen) return undefined;
@@ -116,17 +108,21 @@ export function AccountLayout() {
           </button>
         </div>
         <nav aria-label="Разделы личного кабинета">
-          {links.map(([to, label, Icon]) => (
-            <NavLink key={to} to={to} end={to === "/account"}>
+          {links.map(([to, label, Icon]) => {
+            const count = to === "/account/notifications" ? notificationCount : to === "/account/support" ? supportCount : 0;
+            const countLabel = to === "/account/support" ? "Непрочитанных сообщений поддержки" : "Непрочитанных уведомлений";
+            return <NavLink key={to} to={to} end={to === "/account"}
+              className={({ isActive }) => [isActive && "active", count > 0 && "has-unread"].filter(Boolean).join(" ")}
+            >
               <Icon size={18} />
               <span>{label}</span>
-              {to === "/account/notifications" && unreadCount > 0 ? (
-                <span className="nav-count" aria-label={`Непрочитанных уведомлений: ${unreadCount}`}>
-                  {unreadCount > 99 ? "99+" : unreadCount}
+              {count > 0 ? (
+                <span className="nav-count" aria-label={`${countLabel}: ${count}`} aria-live="polite">
+                  {count > 99 ? "99+" : count}
                 </span>
               ) : null}
-            </NavLink>
-          ))}
+            </NavLink>;
+          })}
         </nav>
         <div className="sidebar-user">
           <p>{user?.email}</p>
@@ -146,6 +142,7 @@ export function AccountLayout() {
               onClick={() => setMenuOpen(true)}
             >
               <Menu size={22} />
+              {notificationCount + supportCount > 0 && <span className="mobile-unread-dot" aria-label="Есть непрочитанные сообщения" />}
             </button>
             <strong>{activeLabel}</strong>
           </div>

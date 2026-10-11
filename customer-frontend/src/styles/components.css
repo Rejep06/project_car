@@ -405,6 +405,7 @@
 }
 .nav-count {
   margin-left: auto;
+  flex-shrink: 0;
   min-width: 22px;
   height: 22px;
   padding: 0 0.38rem;
@@ -415,6 +416,7 @@
   color: #fff;
   font-size: 0.7rem;
   font-weight: 850;
+  font-variant-numeric: tabular-nums;
 }
 
 .legal-consents-heading {

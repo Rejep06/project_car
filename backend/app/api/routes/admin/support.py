@@ -13,6 +13,8 @@ from app.schemas.support import (
     AdminTicketRead,
     MessageCreate,
     MessageRead,
+    SupportUnreadCount,
+    TicketMessagesRead,
     TicketStatusUpdate,
 )
 from app.services.support_service import SupportService
@@ -23,6 +25,35 @@ router = APIRouter(prefix="/admin/support", tags=["Администратор: �
 
 def client_ip(request: Request) -> str | None:
     return request.client.host if request.client else None
+
+
+@router.get("/unread-count", response_model=SupportUnreadCount)
+async def unread_count(
+    session: SessionDep, admin: CurrentAdminDep
+) -> SupportUnreadCount:
+    return SupportUnreadCount(
+        unread_count=await SupportService.unread_count(
+            session, user_id=admin.id, is_admin=True
+        )
+    )
+
+
+@router.post("/tickets/{ticket_id}/read", response_model=SupportUnreadCount)
+async def mark_ticket_messages_read(
+    ticket_id: UUID,
+    data: TicketMessagesRead,
+    session: SessionDep,
+    admin: CurrentAdminDep,
+) -> SupportUnreadCount:
+    return SupportUnreadCount(
+        unread_count=await SupportService.mark_messages_read(
+            session,
+            ticket_id=ticket_id,
+            message_ids=data.message_ids,
+            user_id=admin.id,
+            is_admin=True,
+        )
+    )
 
 
 @router.get("/tickets", response_model=PaginationResponse[AdminTicketRead])

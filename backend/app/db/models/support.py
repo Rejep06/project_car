@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import datetime
 from uuid import UUID, uuid4
 
-from sqlalchemy import BigInteger, Boolean, DateTime, Enum, ForeignKey, String, Text
+from sqlalchemy import BigInteger, Boolean, DateTime, Enum, ForeignKey, Index, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.types import Uuid
 
@@ -68,6 +68,9 @@ class SupportTicket(TimestampMixin, Base):
 
 class SupportMessage(Base):
     __tablename__ = "support_messages"
+    __table_args__ = (
+        Index("ix_support_messages_read_at_ticket_id", "read_at", "ticket_id"),
+    )
 
     id: Mapped[UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid4)
     ticket_id: Mapped[UUID] = mapped_column(
@@ -79,6 +82,9 @@ class SupportMessage(Base):
     message: Mapped[str] = mapped_column(Text, nullable=False)
     txid: Mapped[str | None] = mapped_column(String(255), index=True, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    # Receipt from the other side of the conversation. Support staff share one
+    # inbox; the ticket owner has the receipt for staff replies.
+    read_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     ticket = relationship("SupportTicket", back_populates="messages", lazy="joined")
     author = relationship("User", lazy="joined")

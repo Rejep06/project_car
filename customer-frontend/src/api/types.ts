@@ -204,6 +204,7 @@ export interface SupportMessage {
   message: string;
   txid: string | null;
   created_at: string;
+  read_at: string | null;
   attachments: Attachment[];
 }
 
@@ -223,6 +224,7 @@ export interface SupportTicket {
   created_at: string;
   updated_at: string;
   closed_at: string | null;
+  unread_count: number;
   messages: SupportMessage[];
 }
 
@@ -234,7 +236,7 @@ export interface PublicSystemConfig {
   deposit_invoice_ttl_minutes: number;
   deposit_amount_reservation_hours: number;
   min_withdrawal_amount: string;
-  withdrawal_fee: string;
+  withdrawal_fee_percent: number;
   withdrawal_is_open: boolean;
   withdrawal_timezone: string;
   withdrawal_weekday_label: string;

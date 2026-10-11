@@ -99,6 +99,34 @@ class WithdrawalCompleteRequest(APIModel):
     comment: str | None = Field(default=None, max_length=1000)
 
 
+class WithdrawalAmountsUpdateRequest(APIModel):
+    amount: str
+    fee: str
+    comment: str = Field(min_length=3, max_length=1000)
+    expected_updated_at: datetime
+
+    @field_validator("amount")
+    @classmethod
+    def validate_amount(cls, value: str) -> str:
+        atomic = parse_amount(value)
+        if atomic <= 0:
+            raise ValueError("Сумма должна быть больше нуля")
+        return format_amount(atomic)
+
+    @field_validator("fee")
+    @classmethod
+    def validate_fee(cls, value: str) -> str:
+        atomic = parse_amount(value)
+        if atomic < 0:
+            raise ValueError("Комиссия не может быть отрицательной")
+        return format_amount(atomic)
+
+    @field_validator("comment", mode="before")
+    @classmethod
+    def trim_comment(cls, value: object) -> object:
+        return value.strip() if isinstance(value, str) else value
+
+
 class AdminWithdrawalRead(WithdrawalRead):
     user_id: UUID
     user_email: str

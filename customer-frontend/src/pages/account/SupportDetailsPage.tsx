@@ -1,5 +1,5 @@
 import { Download } from "lucide-react";
-import { useCallback, useEffect, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { Link, useParams } from "react-router-dom";
 import {
   addTicketMessage,
@@ -13,25 +13,43 @@ import { Card } from "../../components/Card";
 import { LoadingSpinner } from "../../components/LoadingSpinner";
 import { StatusBadge } from "../../components/StatusBadge";
 import { showToast } from "../../components/Toast";
+import { useLiveRefresh } from "../../hooks/useLiveRefresh";
+import { useSupportRead } from "../../hooks/useSupportRead";
 import { formatDate } from "../../utils/date";
 
 export function SupportDetailsPage() {
   const { id = "" } = useParams();
+  return <SupportDetailsContent key={id} id={id} />;
+}
+
+function SupportDetailsContent({ id }: { id: string }) {
   const [ticket, setTicket] = useState<SupportTicket | null>(null);
   const [message, setMessage] = useState("");
   const [files, setFiles] = useState<File[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
-  const load = useCallback(
-    () =>
-      getTicket(id)
-        .then(setTicket)
-        .catch((e: Error) => setError(e.message)),
-    [id],
-  );
+  const loadVersion = useRef(0);
+  const thread = useRef<HTMLDivElement>(null);
+  const load = useCallback(async () => {
+    const version = ++loadVersion.current;
+    try {
+      const result = await getTicket(id);
+      if (version === loadVersion.current) {
+        setTicket(result);
+        setError("");
+      }
+    } catch (reason) {
+      if (version === loadVersion.current) setError(reason instanceof Error ? reason.message : "Не удалось загрузить обращение");
+    }
+  }, [id]);
   useEffect(() => {
+    setTicket(null);
+    setError("");
     void load();
+    return () => { loadVersion.current += 1; };
   }, [load]);
+  useLiveRefresh(load);
+  useSupportRead(!error && ticket?.id === id ? ticket : null, thread);
   async function submit(e: FormEvent) {
     e.preventDefault();
     setSubmitting(true);
@@ -68,7 +86,7 @@ export function SupportDetailsPage() {
     }
   }
   if (error) return <div className="notice danger">{error}</div>;
-  if (!ticket) return <LoadingSpinner />;
+  if (!ticket || ticket.id !== id) return <LoadingSpinner />;
   return (
     <div className="account-page">
       <Link to="/account/support">← Все обращения</Link>
@@ -85,11 +103,12 @@ export function SupportDetailsPage() {
           раскрываются.
         </div>
       )}
-      <div className="message-thread">
+      <div className="message-thread" ref={thread}>
         {ticket.messages.map((item) => (
-          <Card key={item.id} className="message-card">
+          <div key={item.id} data-support-message-id={item.id}>
+          <Card className={`message-card ${item.author_user_id !== ticket.user_id ? "message-incoming" : "message-outgoing"}`}>
             <div className="message-meta">
-              <strong>{item.author_email}</strong>
+              <strong>{item.author_user_id !== ticket.user_id ? "Поддержка" : "Вы"}</strong>
               <span>{formatDate(item.created_at)}</span>
             </div>
             <p className="pre-wrap">{item.message}</p>
@@ -115,6 +134,7 @@ export function SupportDetailsPage() {
               </div>
             )}
           </Card>
+          </div>
         ))}
       </div>
       {ticket.status !== "closed" && (

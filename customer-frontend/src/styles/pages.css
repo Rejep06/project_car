@@ -572,6 +572,29 @@ summary {
   background: #28303c;
   color: white;
 }
+.account-sidebar nav a.has-unread {
+  color: #fff;
+  background: #24375a;
+  box-shadow: inset 3px 0 0 #8eafff, 0 0 14px #739dff12;
+  font-weight: 700;
+}
+.account-sidebar nav a.has-unread:hover,
+.account-sidebar nav a.has-unread.active {
+  background: #304975;
+}
+.account-menu-button {
+  position: relative;
+}
+.mobile-unread-dot {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #e94b55;
+  border: 2px solid #fff;
+}
 .sidebar-user {
   margin-top: auto;
   border-top: 1px solid #333b48;
@@ -727,9 +750,41 @@ summary {
 .message-card {
   max-width: 850px;
 }
-.message-card:nth-child(even) {
+.message-card.message-outgoing {
   margin-left: auto;
   background: #f4f7ff;
+}
+.message-card.message-incoming {
+  border-left: 3px solid var(--primary);
+}
+.support-unread-row {
+  background: #eef4ff;
+}
+.support-unread-row td:first-child {
+  box-shadow: inset 3px 0 0 var(--primary);
+}
+.support-unread-row td:nth-child(2) {
+  font-weight: 700;
+}
+.support-row-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.8rem;
+}
+.unread-count {
+  flex-shrink: 0;
+  display: inline-grid;
+  place-items: center;
+  min-width: 24px;
+  height: 24px;
+  padding: 0 0.4rem;
+  border-radius: 999px;
+  background: var(--primary);
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
 }
 .message-meta {
   display: flex;

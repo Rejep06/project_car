@@ -13,13 +13,41 @@ from app.schemas.support import (
     AttachmentRead,
     MessageCreate,
     MessageRead,
+    SupportUnreadCount,
     TicketCreate,
+    TicketMessagesRead,
     TicketRead,
 )
 from app.services.support_service import SupportService
 from app.utils.pagination import PaginationParams, get_pagination
 
 router = APIRouter(prefix="/support", tags=["Поддержка"])
+
+
+@router.get("/unread-count", response_model=SupportUnreadCount)
+async def unread_count(
+    session: SessionDep, current_user: CurrentUserDep
+) -> SupportUnreadCount:
+    return SupportUnreadCount(
+        unread_count=await SupportService.unread_count(session, user_id=current_user.id)
+    )
+
+
+@router.post("/tickets/{ticket_id}/read", response_model=SupportUnreadCount)
+async def mark_ticket_messages_read(
+    ticket_id: UUID,
+    data: TicketMessagesRead,
+    session: SessionDep,
+    current_user: CurrentUserDep,
+) -> SupportUnreadCount:
+    return SupportUnreadCount(
+        unread_count=await SupportService.mark_messages_read(
+            session,
+            ticket_id=ticket_id,
+            message_ids=data.message_ids,
+            user_id=current_user.id,
+        )
+    )
 
 
 @router.post(

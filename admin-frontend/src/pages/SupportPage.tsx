@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { listTickets } from "../api/support";
 import type { AdminTicket } from "../api/types";
@@ -8,6 +8,7 @@ import { LoadingSpinner } from "../components/LoadingSpinner";
 import { PageHeader } from "../components/PageHeader";
 import { Pagination } from "../components/Pagination";
 import { StatusBadge } from "../components/StatusBadge";
+import { useLiveRefresh } from "../hooks/useLiveRefresh";
 import { formatDateTime } from "../utils/date";
 import { label } from "../utils/labels";
 export function SupportPage() {
@@ -17,16 +18,29 @@ export function SupportPage() {
   const [status, setStatus] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  useEffect(() => {
-    setLoading(true);
-    listTickets(page, 20)
-      .then((r) => {
+  const loadVersion = useRef(0);
+  const load = useCallback(async (background = false) => {
+    const version = ++loadVersion.current;
+    if (!background) setLoading(true);
+    try {
+      const r = await listTickets(page, 20);
+      if (version === loadVersion.current) {
         setItems(r.items);
         setTotal(r.total);
-      })
-      .catch((e) => setError(e.message))
-      .finally(() => setLoading(false));
+        setError("");
+      }
+    } catch (reason) {
+      if (version === loadVersion.current) setError(reason instanceof Error ? reason.message : "Не удалось загрузить обращения");
+    } finally {
+      if (version === loadVersion.current) setLoading(false);
+    }
   }, [page]);
+  useEffect(() => {
+    void load();
+    return () => { loadVersion.current += 1; };
+  }, [load]);
+  const refresh = useCallback(() => load(true), [load]);
+  useLiveRefresh(refresh);
   const filtered = useMemo(
     () => items.filter((x) => !status || x.status === status),
     [items, status],
@@ -76,7 +90,7 @@ export function SupportPage() {
             </thead>
             <tbody>
               {filtered.map((t) => (
-                <tr key={t.id}>
+                <tr key={t.id} className={t.unread_count > 0 ? "support-unread-row" : undefined}>
                   <td>{t.user_email}</td>
                   <td>
                     <strong>{t.subject}</strong>
@@ -99,7 +113,10 @@ export function SupportPage() {
                     )}
                   </td>
                   <td>
-                    <Link to={`/support/${t.id}`}>Открыть</Link>
+                    <div className="support-row-actions">
+                      <Link to={`/support/${t.id}`}>Открыть</Link>
+                      {t.unread_count > 0 && <span className="unread-count" aria-label={`Непрочитанных сообщений: ${t.unread_count}`}>{t.unread_count > 99 ? "99+" : t.unread_count}</span>}
+                    </div>
                   </td>
                 </tr>
               ))}

@@ -6,19 +6,23 @@
 http://localhost:8000/api/v1
 ```
 
-Актуальный OpenAPI содержит **59 paths и 69 HTTP-операций**. Полная машинная схема находится в `BACKEND_OPENAPI.json`.
+Актуальный OpenAPI содержит **88 paths и 101 HTTP-операция**. Полная машинная схема находится в `BACKEND_OPENAPI.json`.
 
 ## Авторизация и профиль
 
 | Метод | Endpoint | Назначение |
 |---|---|---|
-| GET | `/system/config` | Публичные лимиты, окно вывода и условия реферальной программы |
-| POST | `/auth/register` | Регистрация, включая необязательный реферальный код |
-| POST | `/auth/login` | Получение access/refresh token |
+| GET | `/system/config` | Публичные лимиты, процент комиссии `withdrawal_fee_percent`, окно вывода и условия реферальной программы |
+| POST | `/auth/register` | Регистрация с обязательными юридическими согласиями и отправкой подтверждения email |
+| POST | `/auth/email-verification/confirm` | Подтвердить email по одноразовому токену |
+| POST | `/auth/email-verification/resend` | Повторно запросить письмо подтверждения |
+| POST | `/auth/password-reset/request` | Запросить ссылку восстановления пароля |
+| POST | `/auth/password-reset/confirm` | Установить новый пароль и отозвать старые сессии |
+| POST | `/auth/login` | Получение access/refresh token после подтверждения email |
 | POST | `/auth/refresh` | Восстановление сессии и ротация refresh token |
 | POST | `/auth/logout` | Завершение серверной сессии |
 | GET | `/users/me` | Текущий пользователь |
-| PATCH | `/users/me` | Изменение email или пароля |
+| PATCH | `/users/me` | Запрос подтверждения нового email |
 
 ## Клиентские программы
 
@@ -51,6 +55,20 @@ http://localhost:8000/api/v1
 |---|---|---|
 | GET | `/referrals/me` | Личная ссылка, код, статистика и приглашённые пользователи |
 
+## Лотереи и уведомления
+
+| Метод | Endpoint | Назначение |
+|---|---|---|
+| GET | `/lotteries` | Публичный каталог опубликованных лотерей |
+| GET | `/lotteries/{lottery_id}` | Условия, призы и подтверждённые победители |
+| POST | `/lotteries/{lottery_id}/tickets` | Купить билеты с баланса; требуется `Idempotency-Key` |
+| GET | `/lotteries/me/tickets` | Все билеты и подтверждённые призы пользователя |
+| GET | `/lotteries/{lottery_id}/my-tickets` | Билеты пользователя в конкретной лотерее |
+| GET | `/notifications` | Уведомления текущего пользователя |
+| GET | `/notifications/unread-count` | Счётчик непрочитанных уведомлений |
+| POST | `/notifications/{notification_id}/read` | Отметить уведомление прочитанным |
+| POST | `/notifications/read-all` | Прочитать все уведомления |
+
 ## Публикации и поддержка
 
 | Метод | Endpoint | Назначение |
@@ -58,7 +76,9 @@ http://localhost:8000/api/v1
 | GET | `/posts` | Опубликованные материалы |
 | GET | `/posts/{slug}` | Одна публикация |
 | POST | `/support/tickets` | Создать обращение |
-| GET | `/support/tickets` | Обращения пользователя |
+| GET | `/support/tickets` | Обращения пользователя с `unread_count` |
+| GET | `/support/unread-count` | Число непрочитанных входящих сообщений поддержки |
+| POST | `/support/tickets/{ticket_id}/read` | Прочитать перечисленные входящие `message_ids`; возвращает общий `unread_count` |
 | GET | `/support/tickets/{ticket_id}` | Детали обращения |
 | POST | `/support/tickets/{ticket_id}/messages` | Добавить сообщение |
 | POST | `/support/messages/{message_id}/attachments` | Добавить вложения |
@@ -85,7 +105,7 @@ http://localhost:8000/api/v1
 | Метод | Endpoint | Назначение |
 |---|---|---|
 | GET | `/admin/deposit-wallets` | Все адреса пополнения |
-| POST | `/admin/deposit-wallets` | Добавить адрес |
+| POST | `/admin/deposit-wallets` | Добавить адрес любой сети; автопроверка сейчас только Ethereum/USDT ERC-20/Infura |
 | GET | `/admin/deposit-wallets/{wallet_id}` | Получить адрес |
 | PATCH | `/admin/deposit-wallets/{wallet_id}` | Изменить, включить или отключить адрес |
 | GET | `/admin/deposits/unmatched` | Нераспознанные пополнения |
@@ -93,12 +113,32 @@ http://localhost:8000/api/v1
 | POST | `/admin/deposits/unmatched/{unmatched_id}/assign` | Связать и зачислить |
 | POST | `/admin/deposits/unmatched/{unmatched_id}/ignore` | Игнорировать запись |
 
+## Администратор: лотереи
+
+| Метод | Endpoint | Назначение |
+|---|---|---|
+| GET | `/admin/lotteries` | Все лотереи |
+| POST | `/admin/lotteries` | Создать черновик |
+| GET | `/admin/lotteries/{lottery_id}` | Лотерея, призы, билеты и победители |
+| PATCH | `/admin/lotteries/{lottery_id}` | Изменить лотерею |
+| POST | `/admin/lotteries/{lottery_id}/publish` | Опубликовать продажи билетов |
+| POST | `/admin/lotteries/{lottery_id}/prizes` | Добавить приз |
+| PATCH | `/admin/lotteries/{lottery_id}/prizes/{prize_id}` | Изменить приз до первой продажи |
+| DELETE | `/admin/lotteries/{lottery_id}/prizes/{prize_id}` | Удалить приз до первой продажи |
+| GET | `/admin/lotteries/{lottery_id}/tickets` | Билеты; поддерживается поиск по коду и email |
+| POST | `/admin/lotteries/{lottery_id}/draw-random` | Случайно выбрать победителей после `draw_at` |
+| POST | `/admin/lotteries/{lottery_id}/winners/manual` | Выбрать конкретный билет вручную |
+| DELETE | `/admin/lotteries/winners/{winner_id}` | Отменить неподтверждённый выбор |
+| POST | `/admin/lotteries/winners/{winner_id}/confirm` | Подтвердить приз и выдать его |
+| POST | `/admin/lotteries/{lottery_id}/winners/confirm-all` | Подтвердить всех ожидающих победителей |
+
 ## Администратор: выводы, публикации, поддержка
 
 | Метод | Endpoint | Назначение |
 |---|---|---|
 | GET | `/admin/withdrawals` | Все заявки на вывод |
 | GET | `/admin/withdrawals/{withdrawal_id}` | Детали заявки |
+| PATCH | `/admin/withdrawals/{withdrawal_id}/amounts` | Исправить `amount`, `fee` и баланс с причиной `comment`, `expected_updated_at` и `Idempotency-Key` |
 | POST | `/admin/withdrawals/{withdrawal_id}/approve` | Подтвердить заявку |
 | POST | `/admin/withdrawals/{withdrawal_id}/reject` | Отклонить и вернуть средства |
 | POST | `/admin/withdrawals/{withdrawal_id}/mark-sent` | Сохранить TxID и фактическую комиссию |
@@ -110,6 +150,8 @@ http://localhost:8000/api/v1
 | POST | `/admin/posts/{post_id}/publish` | Опубликовать |
 | POST | `/admin/posts/{post_id}/archive` | Архивировать |
 | GET | `/admin/support/tickets` | Все обращения |
+| GET | `/admin/support/unread-count` | Число непрочитанных входящих сообщений пользователей |
+| POST | `/admin/support/tickets/{ticket_id}/read` | Прочитать перечисленные входящие `message_ids` |
 | GET | `/admin/support/tickets/{ticket_id}` | Детали обращения |
 | POST | `/admin/support/tickets/{ticket_id}/messages` | Ответить пользователю |
 | POST | `/admin/support/tickets/{ticket_id}/status` | Изменить статус |

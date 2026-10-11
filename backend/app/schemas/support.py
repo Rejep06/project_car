@@ -72,6 +72,7 @@ class MessageRead(APIModel):
     message: str
     txid: str | None
     created_at: datetime
+    read_at: datetime | None
     attachments: list[AttachmentRead]
 
     @classmethod
@@ -83,6 +84,7 @@ class MessageRead(APIModel):
             message=getattr(message, "message"),
             txid=getattr(message, "txid"),
             created_at=getattr(message, "created_at"),
+            read_at=getattr(message, "read_at"),
             attachments=[
                 AttachmentRead.from_attachment(item, prefix)
                 for item in getattr(message, "attachments")
@@ -102,10 +104,20 @@ class TicketRead(APIModel):
     created_at: datetime
     updated_at: datetime
     closed_at: datetime | None
+    unread_count: int
     messages: list[MessageRead]
 
     @classmethod
-    def from_ticket(cls, ticket: object, prefix: str) -> "TicketRead":
+    def from_ticket(
+        cls, ticket: object, prefix: str, *, for_admin: bool = False
+    ) -> "TicketRead":
+        messages = getattr(ticket, "messages")
+        owner_id = getattr(ticket, "user_id")
+        unread_count = sum(
+            item.read_at is None
+            and ((item.author_user_id == owner_id) if for_admin else (item.author_user_id != owner_id))
+            for item in messages
+        )
         return cls(
             id=getattr(ticket, "id"),
             user_id=getattr(ticket, "user_id"),
@@ -118,7 +130,8 @@ class TicketRead(APIModel):
             created_at=getattr(ticket, "created_at"),
             updated_at=getattr(ticket, "updated_at"),
             closed_at=getattr(ticket, "closed_at"),
-            messages=[MessageRead.from_message(item, prefix) for item in getattr(ticket, "messages")],
+            unread_count=unread_count,
+            messages=[MessageRead.from_message(item, prefix) for item in messages],
         )
 
 
@@ -137,7 +150,7 @@ class AdminTicketRead(TicketRead):
 
     @classmethod
     def from_ticket(cls, ticket: object, prefix: str) -> "AdminTicketRead":
-        base = TicketRead.from_ticket(ticket, prefix).model_dump()
+        base = TicketRead.from_ticket(ticket, prefix, for_admin=True).model_dump()
         invoice = getattr(ticket, "related_deposit_invoice", None)
         direct_deposit = getattr(ticket, "related_blockchain_deposit", None)
         unmatched = getattr(ticket, "related_unmatched_deposit", None)
@@ -182,3 +195,13 @@ class AdminTicketRead(TicketRead):
 
 class TicketStatusUpdate(APIModel):
     status: SupportTicketStatus
+
+
+class SupportUnreadCount(APIModel):
+    unread_count: int
+
+
+class TicketMessagesRead(APIModel):
+    """Acknowledge only the incoming messages actually shown to the viewer."""
+
+    message_ids: list[UUID] = Field(min_length=1, max_length=1000)

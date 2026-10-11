@@ -92,7 +92,8 @@ class Settings(BaseSettings):
     deposit_poll_interval_seconds: int = Field(default=300, ge=1)
 
     min_withdrawal_amount: str = "20.000000"
-    withdrawal_fee: str = "2.000000"
+    # Процент от суммы к получению; старый WITHDRAWAL_FEE больше не используется.
+    withdrawal_fee_percent: int = Field(default=10, ge=0, le=100)
     business_timezone: str = "Asia/Almaty"
     withdrawal_allowed_weekday: int = Field(default=2, ge=-1, le=6)
     withdrawal_processing_min_hours: int = Field(default=1, ge=1, le=72)
@@ -178,12 +179,9 @@ class Settings(BaseSettings):
 
         min_deposit = parse_amount(self.min_deposit_amount)
         min_withdrawal = parse_amount(self.min_withdrawal_amount)
-        withdrawal_fee = parse_amount(self.withdrawal_fee)
         premium_referral_bonus = parse_amount(self.premium_referral_reward_bonus)
         if min_deposit <= 0 or min_withdrawal <= 0:
             raise ValueError("Минимальные суммы должны быть больше нуля")
-        if withdrawal_fee < 0:
-            raise ValueError("Комиссия вывода не может быть отрицательной")
         if premium_referral_bonus < 0:
             raise ValueError("Реферальный бонус не может быть отрицательным")
         if self.deposit_amount_reservation_hours * 60 <= self.deposit_invoice_ttl_minutes:
@@ -243,10 +241,6 @@ class Settings(BaseSettings):
     @property
     def min_withdrawal_amount_atomic(self) -> int:
         return parse_amount(self.min_withdrawal_amount)
-
-    @property
-    def withdrawal_fee_atomic(self) -> int:
-        return parse_amount(self.withdrawal_fee)
 
     @property
     def premium_referral_reward_bonus_atomic(self) -> int:

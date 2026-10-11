@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { getSystemConfig } from "../../api/system";
 import {
@@ -14,6 +14,7 @@ import { LoadingSpinner } from "../../components/LoadingSpinner";
 import { Pagination } from "../../components/Pagination";
 import { StatusBadge } from "../../components/StatusBadge";
 import { showToast } from "../../components/Toast";
+import { useLiveRefresh } from "../../hooks/useLiveRefresh";
 import { formatDate } from "../../utils/date";
 
 const categoryLabels: Record<SupportTicket["category"], string> = {
@@ -45,19 +46,30 @@ export function SupportPage() {
   const navigate = useNavigate();
   const invoiceId = search.get("invoiceId") || undefined;
   const expected = search.get("expected");
-  function load() {
-    setLoading(true);
-    Promise.all([listTickets(page, 10), getSystemConfig()])
-      .then(([d, c]) => {
+  const loadVersion = useRef(0);
+  const load = useCallback(async (background = false) => {
+    const version = ++loadVersion.current;
+    if (!background) setLoading(true);
+    try {
+      const [d, c] = await Promise.all([listTickets(page, 10), getSystemConfig()]);
+      if (version === loadVersion.current) {
         setItems(d.items);
         setTotal(d.total);
         setConfig(c);
         setError("");
-      })
-      .catch((e: Error) => setError(e.message))
-      .finally(() => setLoading(false));
-  }
-  useEffect(load, [page]);
+      }
+    } catch (reason) {
+      if (version === loadVersion.current) setError(reason instanceof Error ? reason.message : "Не удалось загрузить обращения");
+    } finally {
+      if (version === loadVersion.current) setLoading(false);
+    }
+  }, [page]);
+  useEffect(() => {
+    void load();
+    return () => { loadVersion.current += 1; };
+  }, [load]);
+  const refresh = useCallback(() => load(true), [load]);
+  useLiveRefresh(refresh);
   function selectFiles(list: FileList | null) {
     const next = Array.from(list ?? []);
     const max = config?.support_max_files_per_message ?? 3;
@@ -237,7 +249,7 @@ export function SupportPage() {
               </thead>
               <tbody>
                 {items.map((item) => (
-                  <tr key={item.id}>
+                  <tr key={item.id} className={item.unread_count > 0 ? "support-unread-row" : undefined}>
                     <td>{formatDate(item.created_at)}</td>
                     <td>{item.subject}</td>
                     <td>{categoryLabels[item.category]}</td>
@@ -245,7 +257,10 @@ export function SupportPage() {
                       <StatusBadge status={item.status} />
                     </td>
                     <td>
-                      <Link to={`/account/support/${item.id}`}>Открыть</Link>
+                      <div className="support-row-actions">
+                        <Link to={`/account/support/${item.id}`}>Открыть</Link>
+                        {item.unread_count > 0 && <span className="unread-count" aria-label={`Непрочитанных сообщений: ${item.unread_count}`}>{item.unread_count > 99 ? "99+" : item.unread_count}</span>}
+                      </div>
                     </td>
                   </tr>
                 ))}

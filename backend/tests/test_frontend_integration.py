@@ -12,6 +12,8 @@ async def test_public_system_config_does_not_expose_secrets(client):
     assert body["network"] == "Ethereum (ERC-20)"
     assert body["deposit_invoice_ttl_minutes"] == 30
     assert body["deposit_amount_reservation_hours"] == 24
+    assert body["withdrawal_fee_percent"] == 10
+    assert "withdrawal_fee" not in body
     serialized = str(body).lower()
     assert "secret" not in serialized
     assert "api_key" not in serialized

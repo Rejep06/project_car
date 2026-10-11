@@ -5,7 +5,7 @@ from pathlib import Path
 from uuid import UUID
 
 from fastapi import UploadFile
-from sqlalchemy import func, select
+from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, selectinload
 
@@ -28,6 +28,63 @@ from app.utils.files import StoredFile, resolve_attachment_path, store_support_u
 
 
 class SupportService:
+    @staticmethod
+    async def unread_count(
+        session: AsyncSession, *, user_id: UUID, is_admin: bool = False
+    ) -> int:
+        query = (
+            select(func.count(SupportMessage.id))
+            .join(SupportTicket, SupportTicket.id == SupportMessage.ticket_id)
+            .where(SupportMessage.read_at.is_(None))
+        )
+        if is_admin:
+            query = query.where(SupportMessage.author_user_id == SupportTicket.user_id)
+        else:
+            query = query.where(
+                SupportTicket.user_id == user_id,
+                SupportMessage.author_user_id != user_id,
+            )
+        return int(await session.scalar(query) or 0)
+
+    @staticmethod
+    async def mark_messages_read(
+        session: AsyncSession,
+        *,
+        ticket_id: UUID,
+        message_ids: list[UUID],
+        user_id: UUID,
+        is_admin: bool = False,
+    ) -> int:
+        query = select(SupportTicket.user_id).where(SupportTicket.id == ticket_id)
+        if not is_admin:
+            query = query.where(SupportTicket.user_id == user_id)
+        owner_id = await session.scalar(query)
+        if owner_id is None:
+            raise AppError("support_ticket_not_found", "Обращение не найдено", status_code=404)
+
+        incoming = (
+            SupportMessage.author_user_id == owner_id
+            if is_admin
+            else SupportMessage.author_user_id != owner_id
+        )
+        # The explicit ID set prevents a reply arriving after a GET from being
+        # acknowledged before the viewer has seen it. Foreign IDs and outgoing
+        # messages do not affect this conversation or the other side's inbox.
+        await session.execute(
+            update(SupportMessage)
+            .where(
+                SupportMessage.ticket_id == ticket_id,
+                SupportMessage.id.in_(message_ids),
+                SupportMessage.read_at.is_(None),
+                incoming,
+            )
+            .values(read_at=utcnow())
+        )
+        await session.commit()
+        return await SupportService.unread_count(
+            session, user_id=user_id, is_admin=is_admin
+        )
+
     @staticmethod
     async def _resolve_txid_links(
         session: AsyncSession,

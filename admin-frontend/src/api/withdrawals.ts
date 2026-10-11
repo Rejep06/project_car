@@ -6,6 +6,28 @@ export const listWithdrawals = (page = 1, pageSize = 20) =>
   );
 export const getWithdrawal = (id: string) =>
   apiRequest<AdminWithdrawal>(`/admin/withdrawals/${id}`);
+
+export interface WithdrawalAmountsUpdate {
+  amount: string;
+  fee: string;
+  comment: string;
+  expected_updated_at: string;
+}
+
+export const updateWithdrawalAmounts = (
+  id: string,
+  data: WithdrawalAmountsUpdate,
+  idempotencyKey: string,
+) =>
+  apiRequest<AdminWithdrawal>(`/admin/withdrawals/${id}/amounts`, {
+    method: "PATCH",
+    headers: { "Idempotency-Key": idempotencyKey },
+    body: JSON.stringify(data),
+  });
+
+export const getWithdrawalFeeConfig = () =>
+  apiRequest<{ withdrawal_fee_percent: number }>("/system/config");
+
 export const approveWithdrawal = (id: string) =>
   apiRequest<AdminWithdrawal>(`/admin/withdrawals/${id}/approve`, {
     method: "POST",

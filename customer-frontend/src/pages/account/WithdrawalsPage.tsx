@@ -17,7 +17,7 @@ import { Pagination } from "../../components/Pagination";
 import { StatusBadge } from "../../components/StatusBadge";
 import { showToast } from "../../components/Toast";
 import { formatDate, formatDateOnly } from "../../utils/date";
-import { addMoney } from "../../utils/money";
+import { addMoney, percentageFee } from "../../utils/money";
 
 export function WithdrawalsPage() {
   const [items, setItems] = useState<Withdrawal[]>([]);
@@ -31,11 +31,12 @@ export function WithdrawalsPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
-  const totalDebit = useMemo(() => {
+  const estimate = useMemo(() => {
     try {
-      return addMoney(amount || "0", config?.withdrawal_fee ?? "0");
+      const fee = percentageFee(amount || "0", config?.withdrawal_fee_percent ?? 0);
+      return { fee, total: addMoney(amount || "0", fee) };
     } catch {
-      return "0.000000";
+      return { fee: "0.000000", total: "0.000000" };
     }
   }, [amount, config]);
 
@@ -156,18 +157,22 @@ export function WithdrawalsPage() {
                 <dd><MoneyValue value={amount || "0.000000"} /></dd>
               </div>
               <div>
-                <dt>Комиссия</dt>
-                <dd><MoneyValue value={config?.withdrawal_fee ?? "0.000000"} /></dd>
+                <dt>Комиссия ({config?.withdrawal_fee_percent ?? "—"}%)</dt>
+                <dd><MoneyValue value={estimate.fee} /></dd>
               </div>
               <div>
                 <dt>С баланса спишется</dt>
-                <dd><MoneyValue value={totalDebit} /></dd>
+                <dd><MoneyValue value={estimate.total} /></dd>
               </div>
               <div>
                 <dt>Доступно</dt>
                 <dd><MoneyValue value={wallet?.available_balance ?? "0.000000"} /></dd>
               </div>
             </dl>
+            <p className="field-hint">
+              Комиссия — {config?.withdrawal_fee_percent ?? "—"}% от суммы к получению.
+              Она добавляется к общей сумме списания.
+            </p>
             <Button
               type="submit"
               loading={submitting}

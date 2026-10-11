@@ -5,11 +5,12 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, Request
 
-from app.api.dependencies import CurrentAdminDep, SessionDep
+from app.api.dependencies import CurrentAdminDep, IdempotencyKeyDep, SessionDep
 from app.core.config import get_settings
 from app.schemas.common import PaginationResponse
 from app.schemas.withdrawal import (
     AdminWithdrawalRead,
+    WithdrawalAmountsUpdateRequest,
     WithdrawalCompleteRequest,
     WithdrawalMarkSentRequest,
     WithdrawalRejectRequest,
@@ -65,6 +66,30 @@ async def approve_withdrawal(
         await WithdrawalService.approve(
             session,
             withdrawal_id=withdrawal_id,
+            admin_user_id=admin.id,
+            ip_address=client_ip(request),
+        )
+    )
+
+
+@router.patch("/{withdrawal_id}/amounts", response_model=AdminWithdrawalRead)
+async def update_withdrawal_amounts(
+    withdrawal_id: UUID,
+    data: WithdrawalAmountsUpdateRequest,
+    request: Request,
+    session: SessionDep,
+    admin: CurrentAdminDep,
+    idempotency_key: IdempotencyKeyDep,
+) -> AdminWithdrawalRead:
+    return serialize(
+        await WithdrawalService.update_amounts(
+            session,
+            withdrawal_id=withdrawal_id,
+            amount=data.amount,
+            fee=data.fee,
+            comment=data.comment,
+            expected_updated_at=data.expected_updated_at,
+            idempotency_key=idempotency_key,
             admin_user_id=admin.id,
             ip_address=client_ip(request),
         )

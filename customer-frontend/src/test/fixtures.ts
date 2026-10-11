@@ -80,7 +80,7 @@ export const systemConfig: PublicSystemConfig = {
   deposit_invoice_ttl_minutes: 30,
   deposit_amount_reservation_hours: 24,
   min_withdrawal_amount: "20.000000",
-  withdrawal_fee: "2.000000",
+  withdrawal_fee_percent: 10,
   withdrawal_is_open: true,
   withdrawal_timezone: "Asia/Almaty",
   withdrawal_weekday_label: "среда",
@@ -149,6 +149,7 @@ export const ticket: SupportTicket = {
   created_at: "2026-07-18T10:00:00Z",
   updated_at: "2026-07-18T10:00:00Z",
   closed_at: null,
+  unread_count: 0,
   messages: [
     {
       id: "77777777-7777-7777-7777-777777777777",
@@ -157,6 +158,7 @@ export const ticket: SupportTicket = {
       message: "Описание",
       txid: `0x${"a".repeat(64)}`,
       created_at: "2026-07-18T10:00:00Z",
+      read_at: "2026-07-18T10:00:00Z",
       attachments: [],
     },
   ],

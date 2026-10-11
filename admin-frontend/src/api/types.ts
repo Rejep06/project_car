@@ -184,6 +184,7 @@ export interface SupportMessage {
   message: string;
   txid: string | null;
   created_at: string;
+  read_at: string | null;
   attachments: Attachment[];
 }
 export interface AdminTicket {
@@ -202,6 +203,7 @@ export interface AdminTicket {
   created_at: string;
   updated_at: string;
   closed_at: string | null;
+  unread_count: number;
   messages: SupportMessage[];
   expected_amount: string | null;
   actual_amount: string | null;

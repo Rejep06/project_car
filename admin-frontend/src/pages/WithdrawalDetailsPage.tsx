@@ -16,10 +16,15 @@ import { LoadingSpinner } from "../components/LoadingSpinner";
 import { PageHeader } from "../components/PageHeader";
 import { StatusBadge } from "../components/StatusBadge";
 import { Toast } from "../components/Toast";
+import { WithdrawalAmountsEditor } from "../components/WithdrawalAmountsEditor";
 import { formatDateTime } from "../utils/date";
 import { formatMoney } from "../utils/money";
 export function WithdrawalDetailsPage() {
   const { id = "" } = useParams();
+  return <WithdrawalDetailsContent key={id} id={id} />;
+}
+
+function WithdrawalDetailsContent({ id }: { id: string }) {
   const [item, setItem] = useState<AdminWithdrawal | null>(null);
   const [busy, setBusy] = useState(false);
   const [confirm, setConfirm] = useState<"approve" | "complete" | null>(null);
@@ -28,16 +33,29 @@ export function WithdrawalDetailsPage() {
   const [fee, setFee] = useState("");
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [editingAmounts, setEditingAmounts] = useState(false);
   useEffect(() => {
+    let active = true;
+    setItem(null);
+    setEditingAmounts(false);
+    setMessage("");
+    setError("");
     getWithdrawal(id)
-      .then(setItem)
-      .catch((e) => setError(e.message));
+      .then((result) => {
+        if (!active) return;
+        setItem(result);
+        setFee(result.fee);
+      })
+      .catch((e) => { if (active) setError(e.message); });
+    return () => { active = false; };
   }, [id]);
   async function action(fn: () => Promise<AdminWithdrawal>, success: string) {
     setBusy(true);
     setError("");
     try {
-      setItem(await fn());
+      const updated = await fn();
+      setItem(updated);
+      setFee(updated.fee);
       setMessage(success);
       setConfirm(null);
     } catch (e) {
@@ -72,9 +90,16 @@ export function WithdrawalDetailsPage() {
         title="Заявка на вывод"
         description={item.id}
         actions={
+          <>
+          {!["cancelled", "rejected"].includes(item.status) && (
+            <Button variant="secondary" disabled={busy} onClick={() => setEditingAmounts(true)}>
+              Изменить сумму и комиссию
+            </Button>
+          )}
           <Link className="button button-secondary" to="/withdrawals">
             Назад
           </Link>
+          </>
         }
       />
       {message && <Toast message={message} />}{" "}
@@ -98,7 +123,7 @@ export function WithdrawalDetailsPage() {
               </dd>
             </div>
             <div>
-              <dt>Расчётная комиссия</dt>
+              <dt>Комиссия</dt>
               <dd>
                 {formatMoney(item.fee)} {item.asset}
               </dd>
@@ -149,6 +174,20 @@ export function WithdrawalDetailsPage() {
           </dl>
         </Card>
       </div>
+      {editingAmounts && (
+        <WithdrawalAmountsEditor
+          key={item.id}
+          item={item}
+          onClose={() => setEditingAmounts(false)}
+          onUpdated={(updated) => {
+            setItem(updated);
+            setFee(updated.fee);
+            setEditingAmounts(false);
+            setMessage("Сумма и комиссия обновлены, баланс пересчитан");
+            setError("");
+          }}
+        />
+      )}
       {item.status === "pending_review" && (
         <div className="action-grid">
           <Card>

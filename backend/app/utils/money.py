@@ -48,3 +48,16 @@ def format_amount(value: int) -> str:
     absolute = abs(value)
     whole, fraction = divmod(absolute, ATOMIC_FACTOR)
     return f"{sign}{whole}.{fraction:06d}"
+
+
+def percentage_fee(amount_atomic: int, percent: int) -> int:
+    """Процент от суммы с округлением half-up до одного atomic unit.
+
+    1 atomic unit = 0.000001 USDT. Расчёт целочисленный: например,
+    10% от 20.000005 USDT округляются с 2.0000005 до 2.000001 USDT.
+    """
+    if not isinstance(amount_atomic, int) or isinstance(amount_atomic, bool) or amount_atomic < 0:
+        raise ValueError("Сумма должна быть целым неотрицательным количеством atomic units")
+    if not isinstance(percent, int) or isinstance(percent, bool) or not 0 <= percent <= 100:
+        raise ValueError("Процент комиссии должен быть целым числом от 0 до 100")
+    return (amount_atomic * percent + 50) // 100

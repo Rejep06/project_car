@@ -5,7 +5,7 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict
 
-from app.db.enums import BinanceDepositStatus
+from app.db.enums import BlockchainDepositStatus as BinanceDepositStatus
 from app.utils.datetime import ensure_utc
 from app.utils.money import parse_amount
 

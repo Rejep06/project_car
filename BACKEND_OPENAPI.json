@@ -1729,6 +1729,90 @@
         }
       }
     },
+    "/api/v1/support/unread-count": {
+      "get": {
+        "tags": [
+          "Поддержка"
+        ],
+        "summary": "Unread Count",
+        "operationId": "unread_count_api_v1_support_unread_count_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SupportUnreadCount"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/support/tickets/{ticket_id}/read": {
+      "post": {
+        "tags": [
+          "Поддержка"
+        ],
+        "summary": "Mark Ticket Messages Read",
+        "operationId": "mark_ticket_messages_read_api_v1_support_tickets__ticket_id__read_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "ticket_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Ticket Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TicketMessagesRead"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SupportUnreadCount"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/support/tickets": {
       "post": {
         "tags": [
@@ -3208,6 +3292,75 @@
         }
       }
     },
+    "/api/v1/admin/withdrawals/{withdrawal_id}/amounts": {
+      "patch": {
+        "tags": [
+          "Администратор: выводы"
+        ],
+        "summary": "Update Withdrawal Amounts",
+        "operationId": "update_withdrawal_amounts_api_v1_admin_withdrawals__withdrawal_id__amounts_patch",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "withdrawal_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Withdrawal Id"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 255,
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WithdrawalAmountsUpdateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminWithdrawalRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/admin/withdrawals/{withdrawal_id}/reject": {
       "post": {
         "tags": [
@@ -4482,6 +4635,90 @@
         }
       }
     },
+    "/api/v1/admin/support/unread-count": {
+      "get": {
+        "tags": [
+          "Администратор: поддержка"
+        ],
+        "summary": "Unread Count",
+        "operationId": "unread_count_api_v1_admin_support_unread_count_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SupportUnreadCount"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/support/tickets/{ticket_id}/read": {
+      "post": {
+        "tags": [
+          "Администратор: поддержка"
+        ],
+        "summary": "Mark Ticket Messages Read",
+        "operationId": "mark_ticket_messages_read_api_v1_admin_support_tickets__ticket_id__read_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "ticket_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Ticket Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TicketMessagesRead"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SupportUnreadCount"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/admin/support/tickets": {
       "get": {
         "tags": [
@@ -4918,6 +5155,10 @@
             ],
             "title": "Closed At"
           },
+          "unread_count": {
+            "type": "integer",
+            "title": "Unread Count"
+          },
           "messages": {
             "items": {
               "$ref": "#/components/schemas/MessageRead"
@@ -5056,6 +5297,7 @@
           "created_at",
           "updated_at",
           "closed_at",
+          "unread_count",
           "messages"
         ],
         "title": "AdminTicketRead"
@@ -5519,7 +5761,7 @@
           "files": {
             "items": {
               "type": "string",
-              "format": "binary"
+              "contentMediaType": "application/octet-stream"
             },
             "type": "array",
             "title": "Files",
@@ -7840,6 +8082,18 @@
             "format": "date-time",
             "title": "Created At"
           },
+          "read_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Read At"
+          },
           "attachments": {
             "items": {
               "$ref": "#/components/schemas/AttachmentRead"
@@ -7857,6 +8111,7 @@
           "message",
           "txid",
           "created_at",
+          "read_at",
           "attachments"
         ],
         "title": "MessageRead"
@@ -9124,9 +9379,9 @@
             "type": "string",
             "title": "Min Withdrawal Amount"
           },
-          "withdrawal_fee": {
-            "type": "string",
-            "title": "Withdrawal Fee"
+          "withdrawal_fee_percent": {
+            "type": "integer",
+            "title": "Withdrawal Fee Percent"
           },
           "withdrawal_is_open": {
             "type": "boolean",
@@ -9187,7 +9442,7 @@
           "deposit_invoice_ttl_minutes",
           "deposit_amount_reservation_hours",
           "min_withdrawal_amount",
-          "withdrawal_fee",
+          "withdrawal_fee_percent",
           "withdrawal_is_open",
           "withdrawal_timezone",
           "withdrawal_weekday_label",
@@ -9517,6 +9772,20 @@
         ],
         "title": "SupportTicketStatus"
       },
+      "SupportUnreadCount": {
+        "properties": {
+          "unread_count": {
+            "type": "integer",
+            "title": "Unread Count"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "unread_count"
+        ],
+        "title": "SupportUnreadCount"
+      },
       "TicketCreate": {
         "properties": {
           "category": {
@@ -9566,6 +9835,27 @@
           "message"
         ],
         "title": "TicketCreate"
+      },
+      "TicketMessagesRead": {
+        "properties": {
+          "message_ids": {
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type": "array",
+            "maxItems": 1000,
+            "minItems": 1,
+            "title": "Message Ids"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "message_ids"
+        ],
+        "title": "TicketMessagesRead",
+        "description": "Acknowledge only the incoming messages actually shown to the viewer."
       },
       "TicketRead": {
         "properties": {
@@ -9631,6 +9921,10 @@
             ],
             "title": "Closed At"
           },
+          "unread_count": {
+            "type": "integer",
+            "title": "Unread Count"
+          },
           "messages": {
             "items": {
               "$ref": "#/components/schemas/MessageRead"
@@ -9653,6 +9947,7 @@
           "created_at",
           "updated_at",
           "closed_at",
+          "unread_count",
           "messages"
         ],
         "title": "TicketRead"
@@ -10293,6 +10588,38 @@
           "created_at"
         ],
         "title": "WalletTransactionRead"
+      },
+      "WithdrawalAmountsUpdateRequest": {
+        "properties": {
+          "amount": {
+            "type": "string",
+            "title": "Amount"
+          },
+          "fee": {
+            "type": "string",
+            "title": "Fee"
+          },
+          "comment": {
+            "type": "string",
+            "maxLength": 1000,
+            "minLength": 3,
+            "title": "Comment"
+          },
+          "expected_updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Expected Updated At"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "amount",
+          "fee",
+          "comment",
+          "expected_updated_at"
+        ],
+        "title": "WithdrawalAmountsUpdateRequest"
       },
       "WithdrawalCompleteRequest": {
         "properties": {

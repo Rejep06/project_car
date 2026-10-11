@@ -1,11 +1,11 @@
 """Дополнительная проверка нормализации Binance без сетевого запроса."""
 
 from datetime import UTC, datetime
+from types import SimpleNamespace
 
 import httpx
 import pytest
 
-from app.core.config import Settings
 from app.integrations.binance.client import BinanceReadOnlyClient
 
 
@@ -30,15 +30,13 @@ async def test_binance_client_normalizes_status_and_network():
             ],
         )
 
-    settings = Settings(
-        app_env="test",
-        network="TRON",
-        asset="USDT",
-        database_url="sqlite+aiosqlite:///:memory:",
-        jwt_secret="test",
+    # Legacy HTTP-клиент проверяется изолированно: активные Settings теперь
+    # описывают Infura/ERC-20 и не содержат настроек Binance или сети TRON.
+    settings = SimpleNamespace(
         binance_api_key="read-only-key",
         binance_api_secret="secret",
-        binance_deposit_address="T" + "A" * 33,
+        binance_api_base_url="https://api.binance.com",
+        binance_request_timeout_seconds=30,
     )
     async with httpx.AsyncClient(
         transport=httpx.MockTransport(handler), base_url="https://api.binance.com"

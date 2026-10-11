@@ -1,5 +1,5 @@
 import { Download } from "lucide-react";
-import { useCallback, useEffect, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { Link, useParams } from "react-router-dom";
 import {
   addMessage,
@@ -17,11 +17,17 @@ import { LoadingSpinner } from "../components/LoadingSpinner";
 import { PageHeader } from "../components/PageHeader";
 import { StatusBadge } from "../components/StatusBadge";
 import { Toast } from "../components/Toast";
+import { useLiveRefresh } from "../hooks/useLiveRefresh";
+import { useSupportRead } from "../hooks/useSupportRead";
 import { formatDateTime } from "../utils/date";
 import { label } from "../utils/labels";
 import { formatMoney } from "../utils/money";
 export function SupportDetailsPage() {
   const { id = "" } = useParams();
+  return <SupportDetailsContent key={id} id={id} />;
+}
+
+function SupportDetailsContent({ id }: { id: string }) {
   const [ticket, setTicket] = useState<AdminTicket | null>(null);
   const [reply, setReply] = useState("");
   const [status, setStatus] = useState<AdminTicket["status"]>("in_review");
@@ -30,19 +36,30 @@ export function SupportDetailsPage() {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
-  const load = useCallback(
-    () =>
-      getTicket(id)
-        .then((t) => {
+  const loadVersion = useRef(0);
+  const thread = useRef<HTMLDivElement>(null);
+  const load = useCallback(async (background = false) => {
+    const version = ++loadVersion.current;
+    try {
+      const t = await getTicket(id);
+      if (version === loadVersion.current) {
           setTicket(t);
-          setStatus(t.status);
-        })
-        .catch((e) => setError(e.message)),
-    [id],
-  );
+          if (!background) setStatus(t.status);
+          setError("");
+      }
+    } catch (reason) {
+      if (version === loadVersion.current) setError(reason instanceof Error ? reason.message : "Не удалось загрузить обращение");
+    }
+  }, [id]);
   useEffect(() => {
+    setTicket(null);
+    setError("");
     void load();
+    return () => { loadVersion.current += 1; };
   }, [load]);
+  const refresh = useCallback(() => load(true), [load]);
+  useLiveRefresh(refresh);
+  useSupportRead(ticket?.id === id ? ticket : null, thread);
   async function send(e: FormEvent) {
     e.preventDefault();
     setBusy(true);
@@ -93,8 +110,8 @@ export function SupportDetailsPage() {
       setError(err instanceof Error ? err.message : "Ошибка скачивания");
     }
   }
-  if (!ticket && !error) return <LoadingSpinner />;
-  if (!ticket) return <p className="form-error">{error}</p>;
+  if ((!ticket || ticket.id !== id) && !error) return <LoadingSpinner />;
+  if (!ticket || ticket.id !== id) return <p className="form-error">{error}</p>;
   return (
     <>
       <PageHeader
@@ -201,9 +218,9 @@ export function SupportDetailsPage() {
       </div>
       <Card>
         <h2>История сообщений</h2>
-        <div className="messages">
+        <div className="messages" ref={thread}>
           {ticket.messages.map((m) => (
-            <article key={m.id}>
+            <article key={m.id} data-support-message-id={m.id} className={m.author_user_id === ticket.user_id ? "message-incoming" : undefined}>
               <header>
                 <strong>{m.author_email}</strong>
                 <time>{formatDateTime(m.created_at)}</time>

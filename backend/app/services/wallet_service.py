@@ -34,7 +34,10 @@ class WalletService:
     @staticmethod
     async def lock_wallet(session: AsyncSession, user_id: UUID) -> Wallet:
         wallet = await session.scalar(
-            select(Wallet).where(Wallet.user_id == user_id).with_for_update(of=Wallet)
+            select(Wallet)
+            .where(Wallet.user_id == user_id)
+            .with_for_update(of=Wallet)
+            .execution_options(populate_existing=True)
         )
         if wallet is None:
             raise AppError("wallet_not_found", "Кошелёк не найден", status_code=404)

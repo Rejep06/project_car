@@ -5,6 +5,7 @@ import { render } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { App } from "../App";
 import { AuthProvider } from "../auth/AuthContext";
+import { tokenStore } from "../auth/tokenStore";
 import { PlanCard } from "../components/PlanCard";
 import { ToastRegion } from "../components/Toast";
 import { json, lottery, plan, user, wallet } from "./fixtures";
@@ -26,6 +27,7 @@ function renderApp(route: string) {
 }
 
 function dashboardResponses(path: string): Response | null {
+  if (path.endsWith("/unread-count")) return json({ unread_count: 0 });
   if (path.endsWith("/wallet")) return json(wallet());
   if (path.includes("/subscriptions"))
     return json({ items: [], page: 1, page_size: 5, total: 0 });
@@ -59,7 +61,7 @@ describe("клиентский сайт", () => {
         name: /автомобильная компания с клиентскими программами/i,
       }),
     ).toBeInTheDocument();
-    expect(screen.getByText(/с 2023 года/i)).toBeInTheDocument();
+    expect(screen.getByText("Автомобильная компания · с 2023 года")).toBeInTheDocument();
     expect(
       screen
         .getByRole("img", { name: /автомобиль в современном шоуруме/i })
@@ -111,21 +113,16 @@ describe("клиентский сайт", () => {
     ).toContain("program-car-photo.jpg");
   });
 
-  it("4. работает регистрация с автоматическим входом", async () => {
+  it("4. регистрация ожидает подтверждения email и не выполняет автоматический вход", async () => {
     const fetchMock = vi.fn(
       async (input: RequestInfo | URL, init?: RequestInit) => {
         const path = String(input);
-        if (path.endsWith("/auth/register")) return json(user, 201);
-        if (path.endsWith("/auth/login"))
-          return json({
-            access_token: "access",
-            refresh_token: "refresh",
-            token_type: "bearer",
-            expires_in: 900,
-          });
-        if (path.endsWith("/users/me")) return json(user);
-        const dashboard = dashboardResponses(path);
-        if (dashboard) return dashboard;
+        if (path.endsWith("/auth/register")) return json({
+          email: "user@example.com",
+          verification_required: true,
+          message: "Письмо отправлено",
+          debug_verification_token: null,
+        }, 201);
         throw new Error(`unexpected ${path} ${init?.method}`);
       },
     );
@@ -137,16 +134,25 @@ describe("клиентский сайт", () => {
       screen.getByLabelText("Повторите пароль"),
       "Password1!",
     );
+    for (const checkbox of screen.getAllByRole("checkbox")) {
+      await userEvent.click(checkbox);
+    }
     await userEvent.click(
       screen.getByRole("button", { name: /создать аккаунт/i }),
     );
     expect(
-      await screen.findByRole("heading", { name: "Обзор" }),
+      await screen.findByRole("heading", { name: "Проверьте почту" }),
     ).toBeInTheDocument();
     expect(fetchMock).toHaveBeenCalledWith(
       expect.stringContaining("/auth/register"),
       expect.objectContaining({ method: "POST" }),
     );
+    expect(screen.getByText("user@example.com", { selector: "strong" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Перейти ко входу" })).toHaveAttribute("href", "/login");
+    expect(fetchMock.mock.calls.some(([url]) => /\/auth\/login$|\/users\/me$/.test(String(url)))).toBe(false);
+    expect(tokenStore.getAccessToken()).toBeNull();
+    expect(tokenStore.getRefreshToken()).toBeNull();
+    expect(screen.queryByRole("heading", { name: "Обзор" })).not.toBeInTheDocument();
   });
 
   it("5. работает вход", async () => {

@@ -14,9 +14,12 @@ import {
   X,
 } from "lucide-react";
 import { useState } from "react";
-import { NavLink, Outlet, useNavigate } from "react-router-dom";
+import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
+import { getUnreadSupportCount } from "../api/support";
 import { useAuth } from "../auth/AuthContext";
 import { brandLogoUrl } from "../config/assets";
+import { useUnreadCount } from "../hooks/useUnreadCount";
+import { SUPPORT_READ_EVENT } from "../utils/unreadEvents";
 const items = [
   ["/", "Обзор", Gauge],
   ["/plans", "Программы", CreditCard],
@@ -33,6 +36,8 @@ export function AdminLayout() {
   const [open, setOpen] = useState(false);
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const supportCount = useUnreadCount(user?.id, location.pathname, getUnreadSupportCount, SUPPORT_READ_EVENT);
   async function exit() {
     await logout();
     navigate("/login", { replace: true });
@@ -46,6 +51,7 @@ export function AdminLayout() {
         onClick={() => setOpen(true)}
       >
         <Menu />
+        {supportCount > 0 && <span className="mobile-unread-dot" aria-label="Есть непрочитанные сообщения" />}
       </button>
       {open && (
         <button
@@ -72,16 +78,18 @@ export function AdminLayout() {
             <X />
           </button>
         </div>
-        <nav>
+        <nav aria-label="Разделы панели управления">
           {items.map(([to, text, Icon]) => (
             <NavLink
               key={to}
               to={to}
               end={to === "/"}
+              className={({ isActive }) => [isActive && "active", to === "/support" && supportCount > 0 && "has-unread"].filter(Boolean).join(" ")}
               onClick={() => setOpen(false)}
             >
               <Icon />
               <span>{text}</span>
+              {to === "/support" && supportCount > 0 && <span className="nav-count" aria-label={`Непрочитанных сообщений поддержки: ${supportCount}`} aria-live="polite">{supportCount > 99 ? "99+" : supportCount}</span>}
             </NavLink>
           ))}
         </nav>

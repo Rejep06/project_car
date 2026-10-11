@@ -51,3 +51,12 @@ export function multiplyMoney(value: string, multiplier: number): string {
     throw new Error("Множитель должен быть целым неотрицательным числом");
   return fromAtomic(toAtomic(value) * BigInt(multiplier));
 }
+
+// Одинаковое с backend округление half-up до 0.000001 USDT.
+export function percentageFee(value: string, percent: number): string {
+  if (!Number.isInteger(percent) || percent < 0 || percent > 100)
+    throw new Error("Процент комиссии должен быть целым числом от 0 до 100");
+  const amount = toAtomic(value);
+  if (amount < 0) throw new Error("Сумма не может быть отрицательной");
+  return fromAtomic((amount * BigInt(percent) + 50n) / 100n);
+}

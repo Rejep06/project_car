@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 import { AuthProvider } from "../auth/AuthContext";
+import type { DepositWallet } from "../api/types";
 import { DepositStatusPanel } from "../components/DepositStatusPanel";
 import { ToastRegion } from "../components/Toast";
 import { DepositDetailsPage } from "../pages/account/DepositDetailsPage";
@@ -10,6 +11,7 @@ import { DepositsPage } from "../pages/account/DepositsPage";
 import { SupportDetailsPage } from "../pages/account/SupportDetailsPage";
 import { SupportPage } from "../pages/account/SupportPage";
 import { WithdrawalsPage } from "../pages/account/WithdrawalsPage";
+import { formatDate } from "../utils/date";
 import {
   errorJson,
   invoice,
@@ -38,11 +40,16 @@ function wrap(element: React.ReactElement, route = "/") {
 
 describe("пополнения, поддержка и выводы", () => {
   it("9. создаётся заявка пополнения", async () => {
+    const wallets: DepositWallet[] = [
+      { id: invoice().deposit_wallet_id!, title: "Основной кошелёк", address: `0x${"a".repeat(40)}`, asset: "USDT", network: "ETHEREUM", network_display_name: "Ethereum (ERC-20)", sort_order: 0, is_active: true },
+      { id: "99999999-9999-4999-8999-999999999999", title: "Резервный кошелёк", address: `0x${"b".repeat(40)}`, asset: "USDT", network: "ETHEREUM", network_display_name: "Ethereum (ERC-20)", sort_order: 1, is_active: true },
+    ];
     const fetchMock = vi.fn(
       async (input: RequestInfo | URL, init?: RequestInit) => {
         const path = String(input);
+        if (path.endsWith("/wallet/deposit-addresses")) return json(wallets);
         if (path.includes("/wallet/deposits") && init?.method === "POST")
-          return json(invoice(), 201);
+          return json(invoice({ deposit_wallet_id: wallets[1].id, wallet_name: wallets[1].title, address: wallets[1].address }), 201);
         if (path.includes("/wallet/deposits"))
           return json({ items: [], page: 1, page_size: 10, total: 0 });
         if (path.includes("/system/config")) return json(systemConfig);
@@ -51,17 +58,23 @@ describe("пополнения, поддержка и выводы", () => {
     );
     vi.stubGlobal("fetch", fetchMock);
     wrap(<DepositsPage />);
+    const selectedWallet = await screen.findByRole("radio", { name: /Резервный кошелёк/ });
+    await userEvent.click(selectedWallet);
+    expect(selectedWallet).toBeChecked();
     await userEvent.type(
-      await screen.findByLabelText(/Желаемая сумма USDT/),
+      screen.getByLabelText(/Сумма пополнения/),
       "100.000000",
     );
     await userEvent.click(
-      screen.getByRole("button", { name: "Создать заявку" }),
+      screen.getByRole("button", { name: "Получить реквизиты" }),
     );
     await waitFor(() =>
       expect(fetchMock).toHaveBeenCalledWith(
         expect.stringContaining("/wallet/deposits"),
-        expect.objectContaining({ method: "POST" }),
+        expect.objectContaining({
+          method: "POST",
+          body: JSON.stringify({ amount: "100.000000", deposit_wallet_id: wallets[1].id }),
+        }),
       ),
     );
     expect(
@@ -92,8 +105,10 @@ describe("пополнения, поддержка и выводы", () => {
       />,
     );
     expect(
-      screen.getByRole("heading", { name: "Основной срок оплаты" }),
+      screen.getByRole("heading", { name: "Заявка ожидает оплату" }),
     ).toBeInTheDocument();
+    expect(screen.getByText(/Переведите точную сумму до/)).toHaveTextContent(formatDate(invoice().expires_at));
+    expect(screen.queryByRole("heading", { name: "Основной срок заявки завершён" })).not.toBeInTheDocument();
   });
 
   it("12. после 30 минут показывается период ожидания", () => {
@@ -104,9 +119,10 @@ describe("пополнения, поддержка и выводы", () => {
       />,
     );
     expect(
-      screen.getByRole("heading", { name: "Ожидаем возможный поздний платёж" }),
+      screen.getByRole("heading", { name: "Основной срок заявки завершён" }),
     ).toBeInTheDocument();
-    expect(screen.getByText(/продолжит проверку до/i)).toBeInTheDocument();
+    expect(screen.getByText(/Если перевод уже выполнен, дождитесь обновления статуса/)).toHaveTextContent(formatDate(invoice().amount_reserved_until));
+    expect(screen.queryByRole("heading", { name: "Срок действия реквизитов завершён" })).not.toBeInTheDocument();
   });
 
   it("13. после 24 часов предлагается обращение", () => {
@@ -118,28 +134,33 @@ describe("пополнения, поддержка и выводы", () => {
     );
     expect(
       screen.getByRole("heading", {
-        name: "Период автоматического распознавания завершён",
+        name: "Срок действия реквизитов завершён",
       }),
     ).toBeInTheDocument();
     expect(
-      screen.getByText(/создайте обращение и укажите TxID/i),
+      screen.getByText(/Не отправляйте перевод по этой заявке/),
     ).toBeInTheDocument();
+    expect(screen.getByText(/Создайте новую заявку или обратитесь в поддержку/)).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Заявка ожидает оплату" })).not.toBeInTheDocument();
   });
 
-  it("14. показывается позднее зачисление", () => {
+  it("14. позднее зачисление показывает полученную сумму после истечения срока реквизитов", () => {
     render(
       <DepositStatusPanel
         invoice={invoice({
           status: "credited",
-          received_amount: "100.347000",
+          received_amount: "99.500000",
           credited_after_expiration: true,
         })}
+        now={new Date("2026-07-20T10:00:00Z")}
       />,
     );
     expect(
       screen.getByRole("heading", { name: "Платёж успешно зачислен" }),
     ).toBeInTheDocument();
-    expect(screen.getByText(/после основного срока/i)).toBeInTheDocument();
+    expect(screen.getByText(/Получено:/)).toHaveTextContent("99.500000 USDT");
+    expect(screen.queryByText("100.347000")).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Срок действия реквизитов завершён" })).not.toBeInTheDocument();
   });
 
   it("15. создаётся обращение с TxID", async () => {
@@ -202,10 +223,12 @@ describe("пополнения, поддержка и выводы", () => {
       `0x${"b".repeat(40)}`,
     );
     await userEvent.type(
-      screen.getByLabelText(/Сумма, которую вы получите/),
+      screen.getByLabelText(/Сумма к получению/),
       "50.000000",
     );
-    expect(screen.getByText("52.000000")).toBeInTheDocument();
+    expect(screen.getByText("Комиссия (10%)")).toBeInTheDocument();
+    expect(screen.getByText("5.000000")).toBeInTheDocument();
+    expect(screen.getByText("55.000000")).toBeInTheDocument();
     await userEvent.click(
       screen.getByRole("button", { name: "Создать заявку" }),
     );

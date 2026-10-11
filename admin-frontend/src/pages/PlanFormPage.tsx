@@ -92,7 +92,8 @@ export function PlanFormPage() {
     setError("");
     try {
       if (id) {
-        const { is_active: _isActive, ...changes } = form;
+        const changes = { ...form };
+        delete changes.is_active;
         await updatePlan(id, changes);
       } else {
         await createPlan({ ...form, is_active: form.is_active ?? true });
