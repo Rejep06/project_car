@@ -2,6 +2,7 @@
 
 import secrets
 from datetime import timedelta
+from hashlib import sha256
 from uuid import UUID
 
 from sqlalchemy import delete, func, or_, select, update
@@ -36,6 +37,23 @@ from app.utils.money import ATOMIC_FACTOR, MAX_ATOMIC, format_amount, parse_amou
 
 class DepositService:
     @staticmethod
+    async def _existing_request(
+        session: AsyncSession, *, user_id: UUID, key: str, fingerprint: str
+    ) -> DepositInvoice | None:
+        existing = await session.scalar(
+            select(DepositInvoice).where(DepositInvoice.request_idempotency_key == key)
+        )
+        if existing is not None and (
+            existing.user_id != user_id or existing.request_fingerprint != fingerprint
+        ):
+            raise AppError(
+                "idempotency_key_conflict",
+                "Запрос уже использован для другого пополнения",
+                status_code=409,
+            )
+        return existing
+
+    @staticmethod
     async def expire_invoices(session: AsyncSession) -> int:
         result = await session.execute(
             update(DepositInvoice)
@@ -55,16 +73,29 @@ class DepositService:
         user: User,
         amount: str,
         deposit_wallet_id: UUID | None = None,
+        idempotency_key: str | None = None,
         settings: Settings | None = None,
     ) -> DepositInvoice:
         """Резервирует уникальную точную сумму минимум на заданный срок."""
         settings = settings or get_settings()
+        # Keep scalar snapshots: SQLAlchemy expires ORM state after a rollback.
+        user_id = user.id
+        requested_atomic = parse_amount(amount)
+        fingerprint = sha256(
+            f"{requested_atomic}:{deposit_wallet_id or 'default'}".encode()
+        ).hexdigest()
+        if idempotency_key is not None:
+            await WalletService.lock_wallet(session, user_id)
+            existing = await DepositService._existing_request(
+                session, user_id=user_id, key=idempotency_key, fingerprint=fingerprint
+            )
+            if existing is not None:
+                return existing
         if user.is_frozen:
             raise AppError("user_frozen", "Операции пользователя заморожены", status_code=403)
         deposit_wallet = await DepositWalletService.get_active(
             session, deposit_wallet_id, settings
         )
-        requested_atomic = parse_amount(amount)
         if requested_atomic < settings.min_deposit_amount_atomic:
             raise AppError(
                 "deposit_amount_too_small",
@@ -78,7 +109,20 @@ class DepositService:
                 status_code=409,
             )
 
+        wallet_id = deposit_wallet.id
+        wallet_asset = deposit_wallet.asset
+        wallet_network = deposit_wallet.network
+        wallet_address = deposit_wallet.address
         for _attempt in range(10):
+            if idempotency_key is not None:
+                # Reacquire after a reservation uniqueness rollback. The wallet
+                # row serializes concurrent requests for one user on PostgreSQL.
+                await WalletService.lock_wallet(session, user_id)
+                existing = await DepositService._existing_request(
+                    session, user_id=user_id, key=idempotency_key, fingerprint=fingerprint
+                )
+                if existing is not None:
+                    return existing
             now = utcnow()
             await session.execute(
                 delete(DepositAmountReservation).where(
@@ -116,13 +160,15 @@ class DepositService:
                 expires_at + timedelta(hours=1),
             )
             invoice = DepositInvoice(
-                user_id=user.id,
+                user_id=user_id,
                 requested_amount_atomic=requested_atomic,
+                request_idempotency_key=idempotency_key,
+                request_fingerprint=fingerprint if idempotency_key else None,
                 expected_amount_atomic=expected_atomic,
-                deposit_wallet_id=deposit_wallet.id,
-                asset=deposit_wallet.asset,
-                network=deposit_wallet.network,
-                deposit_address=deposit_wallet.address,
+                deposit_wallet_id=wallet_id,
+                asset=wallet_asset,
+                network=wallet_network,
+                deposit_address=wallet_address,
                 status=DepositInvoiceStatus.WAITING,
                 expires_at=expires_at,
                 amount_reserved_until=reserved_until,

@@ -52,6 +52,11 @@ class DepositInvoice(TimestampMixin, Base):
         nullable=True,
     )
     requested_amount_atomic: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    # Nullable keeps all existing invoices and old web requests compatible.
+    request_idempotency_key: Mapped[str | None] = mapped_column(
+        String(255), unique=True, nullable=True
+    )
+    request_fingerprint: Mapped[str | None] = mapped_column(String(64), nullable=True)
     expected_amount_atomic: Mapped[int] = mapped_column(BigInteger, index=True, nullable=False)
     received_amount_atomic: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
     asset: Mapped[str] = mapped_column(String(16), default="USDT", nullable=False)

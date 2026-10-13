@@ -317,48 +317,15 @@ class LotteryService:
         ip_address: str | None,
         user_agent: str | None,
     ) -> LotteryPurchaseRead:
-        if user.is_frozen:
-            raise AppError(
-                "user_frozen", "Операции пользователя временно недоступны", status_code=403
-            )
         lottery = await cls._load_lottery(session, lottery_id, lock=True)
-        now = utcnow()
-        sold = await cls._ticket_count(session, lottery.id)
-        if lottery.status != LotteryStatus.PUBLISHED:
-            raise AppError(
-                "lottery_sales_closed", "Продажа билетов недоступна", status_code=409
-            )
-        if now < ensure_utc(lottery.sales_start_at):
-            raise AppError(
-                "lottery_sales_not_started",
-                "Продажа билетов ещё не началась",
-                status_code=409,
-            )
-        if now >= ensure_utc(lottery.sales_end_at):
-            raise AppError(
-                "lottery_sales_closed", "Срок покупки билетов завершён", status_code=409
-            )
-        if lottery.max_tickets_total is not None and sold + quantity > lottery.max_tickets_total:
-            raise AppError(
-                "lottery_ticket_limit",
-                "В лотерее осталось меньше билетов, чем указано в запросе",
-                status_code=409,
-            )
-        user_count = await cls._ticket_count(session, lottery.id, user.id)
-        if user_count + quantity > lottery.max_tickets_per_user:
-            raise AppError(
-                "lottery_user_ticket_limit",
-                f"На одного пользователя доступно не более {lottery.max_tickets_per_user} билетов",
-                status_code=409,
-            )
-
         locked_wallet = await WalletService.lock_wallet(session, user.id)
         existing_transaction = await WalletService.find_transaction(
             session, idempotency_key
         )
         if existing_transaction is not None:
             if (
-                existing_transaction.operation_type
+                existing_transaction.wallet_id != locked_wallet.id
+                or existing_transaction.operation_type
                 != WalletOperationType.LOTTERY_TICKET_PURCHASE
                 or existing_transaction.related_entity_type
                 != "lottery_ticket_purchase"
@@ -388,8 +355,14 @@ class LotteryService:
             )
             if purchase is None:
                 raise AppError(
-                    "idempotency_state_error",
-                    "Не удалось восстановить предыдущую покупку",
+                    "idempotency_key_conflict",
+                    "Запрос уже использован для другой лотереи",
+                    status_code=409,
+                )
+            if purchase.quantity != quantity:
+                raise AppError(
+                    "idempotency_key_conflict",
+                    "Запрос уже использован для другого количества билетов",
                     status_code=409,
                 )
             return LotteryPurchaseRead(
@@ -399,6 +372,42 @@ class LotteryService:
                 total_amount=format_amount(purchase.total_amount_atomic),
                 tickets=[cls._ticket_read(item) for item in purchase.tickets],
                 created_at=purchase.created_at,
+            )
+
+        # Validate only a new purchase. A retry of a committed request must
+        # remain recoverable after the sale closes or a ticket limit is met.
+        if user.is_frozen:
+            raise AppError(
+                "user_frozen", "Операции пользователя временно недоступны", status_code=403
+            )
+        now = utcnow()
+        sold = await cls._ticket_count(session, lottery.id)
+        if lottery.status != LotteryStatus.PUBLISHED:
+            raise AppError(
+                "lottery_sales_closed", "Продажа билетов недоступна", status_code=409
+            )
+        if now < ensure_utc(lottery.sales_start_at):
+            raise AppError(
+                "lottery_sales_not_started",
+                "Продажа билетов ещё не началась",
+                status_code=409,
+            )
+        if now >= ensure_utc(lottery.sales_end_at):
+            raise AppError(
+                "lottery_sales_closed", "Срок покупки билетов завершён", status_code=409
+            )
+        if lottery.max_tickets_total is not None and sold + quantity > lottery.max_tickets_total:
+            raise AppError(
+                "lottery_ticket_limit",
+                "В лотерее осталось меньше билетов, чем указано в запросе",
+                status_code=409,
+            )
+        user_count = await cls._ticket_count(session, lottery.id, user.id)
+        if user_count + quantity > lottery.max_tickets_per_user:
+            raise AppError(
+                "lottery_user_ticket_limit",
+                f"На одного пользователя доступно не более {lottery.max_tickets_per_user} билетов",
+                status_code=409,
             )
 
         purchase_id = uuid4()

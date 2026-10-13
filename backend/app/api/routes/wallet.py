@@ -5,7 +5,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, status
 
-from app.api.dependencies import CurrentUserDep, SessionDep
+from app.api.dependencies import CurrentUserDep, OptionalIdempotencyKeyDep, SessionDep
 from app.core.config import get_settings
 from app.schemas.common import PaginationResponse
 from app.schemas.deposit import DepositInvoiceCreate, DepositInvoiceRead
@@ -67,6 +67,7 @@ async def create_deposit_invoice(
     data: DepositInvoiceCreate,
     session: SessionDep,
     current_user: CurrentUserDep,
+    idempotency_key: OptionalIdempotencyKeyDep,
 ) -> DepositInvoiceRead:
     settings = get_settings()
     invoice = await DepositService.create_invoice(
@@ -74,6 +75,7 @@ async def create_deposit_invoice(
         user=current_user,
         amount=data.amount,
         deposit_wallet_id=data.deposit_wallet_id,
+        idempotency_key=idempotency_key,
         settings=settings,
     )
     return DepositInvoiceRead.from_invoice(invoice, settings.network_display_name)
@@ -125,6 +127,7 @@ async def create_withdrawal(
     data: WithdrawalCreate,
     session: SessionDep,
     current_user: CurrentUserDep,
+    idempotency_key: OptionalIdempotencyKeyDep,
 ) -> WithdrawalRead:
     settings = get_settings()
     item = await WithdrawalService.create(
@@ -132,6 +135,7 @@ async def create_withdrawal(
         user=current_user,
         destination_address=data.destination_address,
         amount=data.amount,
+        idempotency_key=idempotency_key,
         settings=settings,
     )
     return WithdrawalRead.from_withdrawal(item, settings.network_display_name)

@@ -76,13 +76,6 @@ class SubscriptionService:
         plan_id: UUID,
         idempotency_key: str,
     ) -> tuple[UserSubscription, list[RewardPayout], bool]:
-        if user.is_frozen:
-            raise AppError(
-                "user_frozen",
-                "Операции пользователя временно недоступны",
-                status_code=403,
-            )
-
         wallet = await WalletService.lock_wallet(session, user.id)
         existing_transaction = await WalletService.find_transaction(
             session, idempotency_key
@@ -126,6 +119,13 @@ class SubscriptionService:
                 ).all()
             )
             return existing, payouts, False
+
+        if user.is_frozen:
+            raise AppError(
+                "user_frozen",
+                "Операции пользователя временно недоступны",
+                status_code=403,
+            )
 
         plan = await session.scalar(
             select(SubscriptionPlan).where(

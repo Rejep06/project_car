@@ -26,9 +26,39 @@ class WithdrawalService:
         user: User,
         destination_address: str,
         amount: str,
+        idempotency_key: str | None = None,
         settings: Settings | None = None,
     ) -> WithdrawalRequest:
         settings = settings or get_settings()
+        amount_atomic = parse_amount(amount)
+        wallet = None
+        request_key = None
+        if idempotency_key is not None:
+            # Hash the caller key so all valid 255-character headers fit the
+            # existing ledger column. The hold and request commit atomically.
+            request_key = "withdrawal:request:" + sha256(idempotency_key.encode()).hexdigest()
+            wallet = await WalletService.lock_wallet(session, user.id)
+            previous = await WalletService.find_transaction(session, request_key)
+            if previous is not None:
+                metadata = previous.metadata_json or {}
+                if (
+                    previous.wallet_id != wallet.id
+                    or previous.operation_type != WalletOperationType.WITHDRAWAL_HOLD
+                    or previous.related_entity_type != "withdrawal_request"
+                    or previous.related_entity_id is None
+                    or metadata.get("requested_amount_atomic") != amount_atomic
+                    or metadata.get("destination_address") != destination_address
+                ):
+                    raise AppError(
+                        "idempotency_key_conflict",
+                        "Запрос уже использован для другого вывода",
+                        status_code=409,
+                    )
+                # Replay succeeds after Wednesday closes, or after the admin
+                # changes the status/amount. It returns the current DB record.
+                return await WithdrawalService.get_user(
+                    session, user_id=user.id, withdrawal_id=previous.related_entity_id
+                )
         if user.is_frozen:
             raise AppError("user_frozen", "Операции пользователя временно недоступны", status_code=403)
         window = get_withdrawal_window(
@@ -46,7 +76,6 @@ class WithdrawalService:
                 f"Заявку на вывод можно подать каждую среду. Ближайшая дата: {next_date}",
                 status_code=409,
             )
-        amount_atomic = parse_amount(amount)
         if amount_atomic < settings.min_withdrawal_amount_atomic:
             raise AppError(
                 "withdrawal_amount_too_small",
@@ -78,11 +107,15 @@ class WithdrawalService:
             operation_type=WalletOperationType.WITHDRAWAL_HOLD,
             available_delta_atomic=-total_atomic,
             locked_delta_atomic=total_atomic,
-            idempotency_key=f"withdrawal:hold:{withdrawal.id}",
+            idempotency_key=request_key or f"withdrawal:hold:{withdrawal.id}",
             related_entity_type="withdrawal_request",
             related_entity_id=withdrawal.id,
             description="Блокировка средств для заявки на вывод",
-            metadata_json={"destination_address": destination_address},
+            metadata_json={
+                "destination_address": destination_address,
+                "requested_amount_atomic": amount_atomic,
+            },
+            locked_wallet=wallet,
         )
         session.add(withdrawal)
         await session.commit()

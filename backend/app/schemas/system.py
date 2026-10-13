@@ -8,6 +8,7 @@ from app.utils.datetime import get_withdrawal_window
 
 
 class PublicSystemConfigRead(APIModel):
+    financial_request_idempotency_supported: bool = True
     app_name: str
     asset: str
     network: str

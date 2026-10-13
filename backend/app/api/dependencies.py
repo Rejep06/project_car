@@ -58,6 +58,22 @@ async def get_idempotency_key(
         raise AppError("invalid_idempotency_key", "Idempotency-Key не может быть пустым")
     return normalized
 
+
+async def get_optional_idempotency_key(
+    idempotency_key: Annotated[
+        str | None,
+        Header(alias="Idempotency-Key", min_length=1, max_length=255),
+    ] = None,
+) -> str | None:
+    """Старый web-клиент может не передавать ключ; mobile передаёт всегда."""
+    if idempotency_key is None:
+        return None
+    normalized = idempotency_key.strip()
+    if not normalized:
+        raise AppError("invalid_idempotency_key", "Idempotency-Key не может быть пустым")
+    return normalized
+
 CurrentUserDep = Annotated[User, Depends(get_current_user)]
 CurrentAdminDep = Annotated[User, Depends(get_current_admin)]
 IdempotencyKeyDep = Annotated[str, Depends(get_idempotency_key)]
+OptionalIdempotencyKeyDep = Annotated[str | None, Depends(get_optional_idempotency_key)]
